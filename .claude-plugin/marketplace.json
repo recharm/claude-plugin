@@ -1,0 +1,17 @@
+{
+  "name": "recharm",
+  "owner": {
+    "name": "Recharm",
+    "url": "https://recharm.com"
+  },
+  "plugins": [
+    {
+      "name": "briefotron",
+      "source": "./",
+      "description": "Turn a creative brief into a sectioned shot list, search Recharm's library for matching footage, review the candidates visually, and return a final creative brief with picks.",
+      "version": "0.1.0",
+      "category": "creative",
+      "keywords": ["recharm", "video", "brief", "visual-search", "ad-brief", "footage finder"]
+    }
+  ]
+}
