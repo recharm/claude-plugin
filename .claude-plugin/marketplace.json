@@ -10,10 +10,10 @@
       "source": {
         "source": "github",
         "repo": "recharm/claude-plugin",
-        "sha": "71f94701efe7628513dd09b8cce14baf8bab3888"
+        "sha": "9e8f6521196a72698cba0ce5d171e38a71d2f3b9"
       },
       "description": "Turn a creative brief into a sectioned shot list, search Recharm's library for matching footage, review the candidates visually, and return a final creative brief with picks.",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "category": "creative",
       "keywords": ["recharm", "video", "brief", "visual-search", "ad-brief", "footage finder"]
     }
