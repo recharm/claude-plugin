@@ -1,7 +1,7 @@
 {
   "name": "recharm",
   "displayName": "Recharm",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Turn a creative brief into a sectioned shot list, search Recharm's library for matching footage on each section, review the results visually, and produce a final brief with picks.",
   "author": {
     "name": "Recharm",
@@ -11,6 +11,7 @@
   "homepage": "https://www.recharm.com",
   "repository": "https://github.com/recharm/claude-plugin",
   "skills": "./skills",
+  "outputStyles": "./styles",
   "license": "MIT",
   "keywords": [
     "recharm",
