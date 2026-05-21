@@ -6,11 +6,10 @@
   },
   "plugins": [
     {
-      "name": "briefotron",
+      "name": "recharm-video-search",
       "source": {
         "source": "github",
-        "repo": "recharm/claude-plugin",
-        "sha": "9e8f6521196a72698cba0ce5d171e38a71d2f3b9"
+        "repo": "recharm/claude-plugin"
       },
       "description": "Turn a creative brief into a sectioned shot list, search Recharm's library for matching footage, review the candidates visually, and return a final creative brief with picks.",
       "version": "0.1.5",
