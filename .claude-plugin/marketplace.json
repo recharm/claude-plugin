@@ -7,7 +7,11 @@
   "plugins": [
     {
       "name": "briefotron",
-      "source": "./",
+      "source": {
+        "source": "github",
+        "repo": "recharm/claude-plugin",
+        "sha": "71f94701efe7628513dd09b8cce14baf8bab3888"
+      },
       "description": "Turn a creative brief into a sectioned shot list, search Recharm's library for matching footage, review the candidates visually, and return a final creative brief with picks.",
       "version": "0.1.4",
       "category": "creative",
