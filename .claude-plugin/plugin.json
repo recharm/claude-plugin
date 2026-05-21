@@ -1,0 +1,11 @@
+{
+  "name": "briefotron",
+  "version": "0.1.0",
+  "description": "Turn a creative brief into a sectioned shot list, search Recharm's library for matching footage on each section, review the results visually, and produce a final brief with picks.",
+  "author": {
+    "name": "Recharm",
+    "url": "https://recharm.com"
+  },
+  "homepage": "https://recharm.com",
+  "keywords": ["recharm", "video", "brief", "visual-search", "ad-brief", "footage finder"]
+}
