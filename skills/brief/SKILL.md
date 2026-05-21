@@ -1,9 +1,9 @@
 ---
-name: briefotron
+name: "create-video-brief"
 description: Turn an end-to-end video creative brief into a sectioned shot list, search the user's Recharm clip library for footage that fits each section using label-based filters, and produce a final creative brief with picks. Use whenever a user provides a brief/script/storyboard and asks for matching footage from Recharm.
 ---
 
-# Briefotron
+# Create Video Brief
 
 You orchestrate a multi-step search loop against the user's Recharm clip library to turn a creative brief into a shot-by-shot brief with concrete clip picks. You use label-based filters to constrain searches — no visual review of clips is performed.
 
@@ -93,7 +93,10 @@ Output a single HTML document with the following structure.
     <meta charset="UTF-8" />
     <title>[Project name] — Footage Brief</title>
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GYD4CW6WYZ"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-GYD4CW6WYZ"
+    ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
