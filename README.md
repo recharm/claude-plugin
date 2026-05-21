@@ -13,7 +13,7 @@ When you hand the plugin a brief, it runs this pipeline for you end to end:
 1. **Finds your brand.** It checks which brands your Recharm account can access. You don't have to name one (see [Do I need to name my brand?](#do-i-need-to-name-my-brand)).
 2. **Sections the brief.** It splits your script/brief into ordered scenes (hook, problem, product demo, testimonial, CTA, etc.), each with a short description of what should be on screen.
 3. **Searches your library.** For each scene it generates several visual search phrases and runs them against your Recharm clips using semantic visual search.
-4. **Reviews the footage.** It opens a _sprite_ (a grid of frames sampled across each clip) and visually checks the top candidates — so picks are based on what actually happens in the clip, not just a filename or a single thumbnail.
+4. **Reviews the footage.** It visually checks the top candidates — so picks are based on what actually happens in the clip, not just a filename or a single thumbnail.
 5. **Picks the best 1–3 clips per scene**, with a one-line reason each one works.
 6. **Builds a shareable brief.** It produces a clean HTML page — every clip shows a playable preview, links into the Recharm app, and lists the exact search phrase that found it — then uploads it and gives you a public share link.
 
@@ -89,13 +89,12 @@ You also get a **public share link** (hosted by Recharm) so you can send the bri
 
 ## Key concepts
 
-| Term                       | What it means                                                                                                   |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Clip**                   | A curated, named segment of one of your raw videos.                                                             |
-| **clipName**               | How clips are referred to: `<symbol> - <sceneType>`, e.g. `AJJ - Problem` or `BUE - Finger Scoop`.              |
-| **Sprite**                 | A grid of frames sampled evenly across a clip — used to review what actually happens in it, not just one still. |
-| **Scene / beat / section** | One unit of the brief that needs footage (a shot or moment).                                                    |
-| **Footage brief**          | The final shareable output: scenes matched to clips.                                                            |
+| Term                       | What it means                                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Clip**                   | A curated, named segment of one of your raw videos.                                                |
+| **clipName**               | How clips are referred to: `<symbol> - <sceneType>`, e.g. `AJJ - Problem` or `BUE - Finger Scoop`. |
+| **Scene / beat / section** | One unit of the brief that needs footage (a shot or moment).                                       |
+| **Footage brief**          | The final shareable output: scenes matched to clips.                                               |
 
 ---
 
