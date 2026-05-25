@@ -10,14 +10,16 @@ You orchestrate a multi-step search loop against the user's Recharm clip library
 The Recharm MCP server (`recharm`) is available in this plugin. Key behavioral notes:
 
 - Call `list_labels` once at the start — keep the result for the entire workflow; do not call it again per scene.
-- Use `clipUrl` (not `posterUrl`) for inline video playback in the HTML.
-- Call `save_brief` exactly once, after the HTML is fully assembled. Each call mints a new URL.
+- You do NOT build HTML. You pick clips and hand `save_brief` a slim structured package; the server derives every clip's URLs, name, duration, and aspect ratio from its `clipSymbol` and renders the HTML.
+- Call `save_brief` exactly once, after the clip picks are final. Each call mints a new URL.
 - Do not paginate `search_clips_visually` — use the first page only.
 - Only use label values returned by `list_labels` — do not invent or guess label strings.
 
 Please check the actual MCP server data for up-to-date API info.
 
 **Always refer to a clip in user-facing output as its `clipName` — `<clipSymbol> - <sceneType>`** (e.g. "AB - Product Reveal"). If `sceneType` is null, fall back to just the `clipSymbol`.
+
+This skill processes one video at a time. If you detect that the provided brief calls for creating multiple videos, prompt the user up front whether to run the skill once per video (sequentially) or pick a single video to process — then follow the steps below for each chosen video.
 
 Follow the steps below in order.
 
@@ -73,73 +75,55 @@ For each scene, generate **2-4 search queries**. Each query has:
 
 ## Step 5 — Search, section by section
 
+Each `search_clips_visually` hit is slim: `clipSymbol`, `clipName`, `rawVideoPublicId`, `sceneType`, `cosineDistance` (lower is closer), `durationMs`, and `categoriesAndLabels` (top hits). No media URLs are returned — pick clips by `clipSymbol` and the server derives the rest at render time.
+
 For each scene:
 
 1. Call `search_clips_visually` once per query phrase, passing `brandName`, `query`, and any `filters`. Do not paginate — use only the first page of results.
 2. Select the **1–2 top results per query** by lowest `cosineDistance`. Do not fetch or examine poster images or sprite images.
 3. Aim for **3–6 clips per scene** total (across all queries). Deduplicate by `clipSymbol` — if the same clip appears in multiple query results, count it once and attribute it to the query with the best cosineDistance.
-4. If all results for a scene have weak cosineDistance scores, still include the best available clips but mark the scene with a warning note (see Step 6).
+4. Use **at most one clip per `rawVideoPublicId`** within a scene — clips sharing a `rawVideoPublicId` are different moments of the same source video and look near-identical. Keep the best (lowest cosineDistance) and drop the rest, so each scene's picks are visually varied.
+5. Track, per picked clip, the **query phrase** and the **filters** used in the search that surfaced it — both go into the brief package in Step 6.
+6. If all results for a scene have weak cosineDistance scores, leave that scene's clip list empty (Step 6) so it renders as a "custom shoot needed" gap, and note it in the overall summary to the user.
 
-## Step 6 — Produce the final brief
+## Step 6 — Assemble the brief package
 
-Output a single HTML document with the following structure.
+Do **not** write HTML. Build a slim structured package the server will render:
 
-### HTML head
+- `title`: a short brief title, e.g. `"5 Outdated Rules" · UGC Testimonial · Women 50+`.
+- `scenes`: the ordered scenes from Step 3. Each scene is:
+  - `name`: the scene heading.
+  - `description`: the 1–2 sentence on-screen description from Step 3.
+  - `clips`: the picked clips for the scene, in order. Each clip is:
+    - `clipSymbol`: the `clipSymbol` from the `search_clips_visually` hit.
+    - `searchString`: the query phrase that surfaced this clip (Step 4/5).
+    - `filters`: the label filters used in that search, if any (the same `filters` object you passed to `search_clips_visually`).
+  - For a scene that needs a custom shoot (no strong matches), use an **empty `clips` array** — it renders as a "custom shoot needed" gap.
 
-```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>[Project name] — Footage Brief</title>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-GYD4CW6WYZ"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-      gtag("config", "G-GYD4CW6WYZ");
-    </script>
-  </head>
-</html>
-```
-
-### Per-scene section
-
-For each scene include:
-
-- The scene heading and narrative role
-- **On screen:** 1–2 sentence description from Step 3
-- **Clips:** for each picked clip show:
-  - Poster image (via `posterUrl`)
-  - Playable inline video (via `clipUrl`)
-  - `clipName`
-  - `cosineDistance`
-  - `durationMs`
-  - The search query phrase that found this clip
-  - `categoriesAndLabels` (the labels assigned to this clip)
-  - `transcript` (the clip's transcript, if present)
-  - A link to view the clip at `https://app.recharm.com/app/<brandName>/?clipId=<clipSymbol>` (URL-encode both values)
-- **Notes:** any warning if the scene had no strong matches (suggest a custom shoot); any other observations.
-
-### End of document
-
-Include a short **Overall notes** section: scenes that need custom footage, cross-cutting style observations, and obvious gaps in the brand's library.
+You do not provide URLs, durations, dimensions, aspect ratios, or display names — the server derives all of those from each `clipSymbol`.
 
 ## Step 7 — Save and share the brief
 
-After the HTML document is complete, call `save_brief` exactly once:
+Once the package is assembled, call `save_brief` exactly once with the **v2** payload:
 
 ```
-save_brief(brandName, { version: "v1", fileHtml: "<the complete HTML>" })
+save_brief(brandName, {
+  version: "v2",
+  title: "<brief title>",
+  scenes: [
+    {
+      name: "<scene heading>",
+      description: "<on-screen description>",
+      clips: [
+        { clipSymbol: "<symbol>", searchString: "<query phrase>", filters: { <category>: ["<label>"] } }
+      ]
+    }
+    // ...a scene needing a custom shoot uses: { name, description, clips: [] }
+  ]
+})
 ```
 
-The tool returns `{ url, briefId, s3Key }` — surface the `url` to the user as the shareable link. If the call fails, show the HTML inline and tell the user the save failed.
+The tool derives, renders, and uploads the HTML, returning `{ url, briefId, s3Key }` — surface the `url` to the user as the shareable link. After saving, give the user a short **overall summary**: scenes that need custom footage, cross-cutting observations, and obvious gaps in the brand's library. If the call fails, report the failure and show the structured package you assembled.
 
 ## What not to do
 
@@ -150,4 +134,5 @@ The tool returns `{ url, briefId, s3Key }` — surface the `url` to the user as 
 - Don't invent `clipSymbol`s — only use ones returned by `search_clips_visually`.
 - Don't refer to a clip by `clipSymbol` alone in user-facing output — always use `clipName`.
 - Don't ask the user to run searches themselves — you do it via the MCP.
-- Don't call `save_brief` more than once per brief, and don't call it before the HTML is finalized.
+- Don't build HTML or construct clip URLs yourself — hand `save_brief` the v2 structured package and let the server render.
+- Don't call `save_brief` more than once per brief, and don't call it before the clip picks are final.
