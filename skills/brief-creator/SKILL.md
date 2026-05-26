@@ -1,5 +1,5 @@
 ---
-name: "create-video-brief"
+name: "brief-creator"
 description: Turn an end-to-end video creative brief into a sectioned shot list, search the user's Recharm clip library for footage that fits each section using label-based filters, and produce a final creative brief with picks. Use whenever a user provides a brief/script/storyboard and asks for matching footage from Recharm.
 ---
 
