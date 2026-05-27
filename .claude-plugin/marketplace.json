@@ -6,7 +6,7 @@
   },
   "plugins": [
     {
-      "name": "recharm-video-search",
+      "name": "recharm",
       "source": {
         "source": "github",
         "repo": "recharm/claude-plugin"
