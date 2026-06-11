@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Footage Gaps — __BRAND__</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f4f4f5; color: #18181b; padding-bottom: 60px; }
+header { background: #09090b; color: #fff; padding: 32px 40px 28px; }
+header .eyebrow { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #71717a; margin-bottom: 8px; }
+header h1 { font-size: 22px; font-weight: 700; }
+header .summary { font-size: 13px; color: #a1a1aa; margin-top: 8px; max-width: 640px; line-height: 1.5; }
+header .summary strong { color: #fff; }
+.stats { background: #fff; border-bottom: 1px solid #e4e4e7; padding: 18px 40px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stat-pill { background: #f4f4f5; border-radius: 999px; padding: 8px 18px; display: flex; align-items: center; gap: 8px; }
+.stat-pill .num { font-size: 20px; font-weight: 800; color: #09090b; }
+.stat-pill .lbl { font-size: 12px; color: #71717a; white-space: nowrap; }
+.stat-sep { width: 1px; height: 28px; background: #e4e4e7; margin: 0 4px; }
+.section { padding: 32px 40px 8px; }
+.section-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #71717a; margin-bottom: 16px; }
+.card { background: #fff; border-radius: 16px; border: 1.5px solid #e4e4e7; display: flex; overflow: hidden; margin-bottom: 12px; }
+.card.gap { border-left: 3px solid #ef4444; }
+.poster { width: 110px; min-width: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 10px; gap: 8px; text-align: center; }
+.gap-num { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.visual-cue { font-size: 10px; line-height: 1.5; color: #71717a; text-align: center; }
+.card-body { padding: 18px 20px; flex: 1; border-left: 1px solid #f4f4f5; }
+.card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.card-top h2 { font-size: 15px; font-weight: 600; }
+.badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .06em; }
+.badge-gap { background: #fef2f2; color: #b91c1c; }
+.badge-cov { background: #dcfce7; color: #15803d; }
+.card-body p { font-size: 13.5px; color: #3f3f46; line-height: 1.65; }
+.card-body p strong { color: #18181b; font-weight: 600; }
+.queries { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.queries .q-label { font-size: 11px; color: #a1a1aa; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.q-chip { font-size: 11.5px; background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b; border-radius: 999px; padding: 3px 10px; font-style: italic; text-decoration: none; display: inline-block; }
+a.q-chip { color: #2563eb; transition: background .15s, border-color .15s; }
+a.q-chip:hover { background: #eff6ff; border-color: #bfdbfe; }
+.near-miss { margin-top: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #78716c; line-height: 1.6; }
+.near-miss .nm-label { font-weight: 700; color: #b45309; text-transform: uppercase; font-size: 10.5px; letter-spacing: .06em; margin-right: 6px; }
+.recharm-link { font-size: 12px; font-weight: 500; color: #2563eb; text-decoration: none; }
+.recharm-link:hover { text-decoration: underline; }
+.covered-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.covered-card { flex: 1 1 220px; min-width: 0; background: #fff; border: 1.5px solid #e4e4e7; border-radius: 12px; padding: 14px 16px; }
+.covered-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.covered-top h3 { font-size: 13px; font-weight: 600; }
+.covered-cue { font-size: 11.5px; color: #71717a; line-height: 1.5; margin-bottom: 8px; }
+.divider { border: none; border-top: 1px solid #e4e4e7; margin: 8px 40px 0; }
+.all-clear { background: #f0fdf4; border: 2px solid #16a34a; border-radius: 16px; padding: 24px 28px; }
+.all-clear h2 { font-size: 16px; font-weight: 700; color: #15803d; margin-bottom: 6px; }
+.all-clear p { font-size: 13.5px; color: #3f3f46; line-height: 1.65; }
+@media (max-width: 580px) {
+  header, .stats, .section { padding-left: 16px; padding-right: 16px; }
+  .divider { margin: 8px 16px 0; }
+  .poster { width: 80px; min-width: 80px; }
+  .gap-num { width: 40px; height: 40px; font-size: 15px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const DATA = __DATA_JSON__;
+
+const GAP_COLORS = ['#ef4444','#f97316','#d97706','#6366f1','#0891b2'];
+const GAP_BG     = ['#fef2f2','#fff7ed','#fffbeb','#f5f3ff','#ecfeff'];
+
+function clipLink(brand, sym) {
+  return `https://app.recharm.com/app/${brand}/?clipId=${sym}`;
+}
+
+function searchLink(brand, query) {
+  const id = Date.now() + Math.floor(Math.random() * 10000);
+  const section = `"virtual:Visual Search:@${id}:Clip:${query}"`;
+  return `https://app.recharm.com/app/${brand}/?section=${encodeURIComponent(section)}`;
+}
+
+function gapCard(gap, i) {
+  const brand = DATA.meta.brand;
+  const cues  = (gap.lookFor || '').split(/\s*·\s*|\n/).map(s => s.trim()).filter(Boolean);
+  const queries = (gap.searchedFor || []).map(q =>
+    `<a class="q-chip" href="${searchLink(brand, q)}" target="_blank">"${q}"</a>`
+  ).join('');
+  let nearMiss = '';
+  if (gap.closestMatch && gap.closestMatch.clipSymbol) {
+    const cm = gap.closestMatch;
+    nearMiss = `
+      <div class="near-miss">
+        <span class="nm-label">Closest match</span>${cm.visualCue ? cm.visualCue + ' — ' : ''}${cm.whyNotEnough || ''}
+        <a class="recharm-link" href="${clipLink(brand, cm.clipSymbol)}" target="_blank">View clip →</a>
+      </div>`;
+  }
+  return `
+    <div class="card gap">
+      <div class="poster" style="background:${GAP_BG[i % GAP_BG.length]}">
+        <div class="gap-num" style="background:${GAP_COLORS[i % GAP_COLORS.length]}">${i + 1}</div>
+        <div class="visual-cue">${cues.join('<br>')}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <h2>${gap.title}</h2>
+          <span class="badge badge-gap">Missing</span>
+        </div>
+        <p>${gap.whyUseful}</p>
+        ${queries ? `<div class="queries"><span class="q-label">Searched:</span>${queries}</div>` : ''}
+        ${nearMiss}
+      </div>
+    </div>`;
+}
+
+function coveredCard(c) {
+  const brand = DATA.meta.brand;
+  return `
+    <div class="covered-card">
+      <div class="covered-top">
+        <h3>${c.title}</h3>
+        <span class="badge badge-cov">Covered</span>
+      </div>
+      <div class="covered-cue">${c.visualCue || ''}</div>
+      <a class="recharm-link" href="${clipLink(brand, c.clipSymbol)}" target="_blank">View clip →</a>
+    </div>`;
+}
+
+function render() {
+  const { meta, gaps = [], covered = [] } = DATA;
+  let html = `
+    <header>
+      <div class="eyebrow">Footage Gap Report · ${meta.brand}</div>
+      <h1>${meta.concept}</h1>
+      <div class="summary">${meta.summary || ''}</div>
+    </header>
+    <div class="stats">
+      <div class="stat-pill"><span class="num">${meta.shotIdeasConsidered}</span><span class="lbl">Shot ideas audited</span></div>
+      <div class="stat-sep"></div>
+      <div class="stat-pill"><span class="num">${meta.searchesRun}</span><span class="lbl">Searches run</span></div>
+      <div class="stat-sep"></div>
+      <div class="stat-pill" style="background:${gaps.length ? '#fee2e2' : '#dcfce7'}">
+        <span class="num" style="color:${gaps.length ? '#dc2626' : '#15803d'}">${gaps.length}</span>
+        <span class="lbl" style="color:${gaps.length ? '#dc2626' : '#15803d'}">Gaps found</span>
+      </div>
+    </div>`;
+
+  if (gaps.length) {
+    html += `<div class="section"><div class="section-label">✦ Missing Footage — What to Shoot</div>`;
+    gaps.forEach((g, i) => { html += gapCard(g, i); });
+    html += `</div>`;
+  } else {
+    html += `<div class="section">
+      <div class="all-clear">
+        <h2>✓ No gaps found</h2>
+        <p>Every shot idea audited has usable footage in the library. This concept is shootable from existing clips today.</p>
+      </div>
+    </div>`;
+  }
+
+  if (covered.length) {
+    html += `<hr class="divider"/><div class="section"><div class="section-label">Already Covered</div><div class="covered-grid">`;
+    covered.forEach(c => { html += coveredCard(c); });
+    html += `</div></div>`;
+  }
+
+  document.getElementById('root').innerHTML = html;
+  document.title = `Footage Gaps — ${meta.brand}`;
+}
+
+render();
+</script>
+</body>
+</html>
