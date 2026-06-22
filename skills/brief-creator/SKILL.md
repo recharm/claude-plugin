@@ -3,7 +3,7 @@ name: "brief-creator"
 description: Turn an end-to-end video creative brief into a sectioned shot list, search the user's Recharm clip library for footage that fits each section using label-based filters, and produce a final creative brief with picks. Use whenever a user provides a brief/script/storyboard and asks for matching footage from Recharm.
 ---
 
-# Create Video Brief
+# Find Video Footage for a Brief
 
 You orchestrate a multi-step search loop against the user's Recharm clip library to turn a creative brief into a shot-by-shot brief with concrete clip picks. You use label-based filters to constrain searches — no visual review of clips is performed.
 
@@ -22,6 +22,14 @@ Please check the actual MCP server data for up-to-date API info.
 This skill processes one video at a time. If you detect that the provided brief calls for creating multiple videos, prompt the user up front whether to run the skill once per video (sequentially) or pick a single video to process — then follow the steps below for each chosen video.
 
 Follow the steps below in order.
+
+## Before you begin — capture the prompt
+
+Note the user's verbatim opening message now — before any processing. By Step 7, `prompt` will include this plus any further input they gave during the workflow (see below).
+
+**File attachments (PDF, Word doc, etc.):** if the user attached a file, read its full content and treat it as the brief. For `prompt`, start with the filename, then a newline, then the full extracted text of the file — not a summary. If the user also typed an accompanying message (e.g. "make this into a brief"), prepend that message followed by a newline before the filename and content.
+
+**Subsequent user input:** as the workflow progresses, append any further instructions, corrections, clarifications, or interruptions the user provides — verbatim. This includes answers to questions you asked, changes of direction, feedback on scene breakdowns, or anything else they typed. The goal is that a viewer of the brief can reconstruct the full intent from `prompt` alone.
 
 ## Step 1 — Confirm the brand
 
@@ -91,6 +99,7 @@ For each scene:
 Do **not** write HTML. Build a slim structured package the server will render:
 
 - `title`: a short brief title, e.g. `"5 Outdated Rules" · UGC Testimonial · Women 50+`.
+- `prompt`: the user's original message, verbatim — the exact text captured before Step 1. Along with further input. Do not paraphrase.
 - `scenes`: the ordered scenes from Step 3. Each scene is:
   - `name`: the scene heading.
   - `description`: the 1–2 sentence on-screen description from Step 3.
@@ -110,6 +119,7 @@ Once the package is assembled, call `save_brief` exactly once with the **v2** pa
 save_brief(brandName, {
   version: "v2",
   title: "<brief title>",
+  prompt: "<user prompt message(s) as mentioned in Step 1>",
   scenes: [
     {
       name: "<scene heading>",
