@@ -18,13 +18,23 @@ header .summary strong { color: #fff; }
 .stat-pill .lbl { font-size: 12px; color: #71717a; white-space: nowrap; }
 .stat-sep { width: 1px; height: 28px; background: #e4e4e7; margin: 0 4px; }
 .section { padding: 32px 40px 8px; }
-.section-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #71717a; margin-bottom: 16px; }
+.section-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #71717a; margin-bottom: 4px; }
+.section-sub { font-size: 12.5px; color: #a1a1aa; margin-bottom: 16px; }
+.shootlist { background: #fff; border: 1.5px solid #e4e4e7; border-radius: 16px; padding: 18px 22px; margin-bottom: 20px; }
+.shootlist h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #18181b; margin-bottom: 10px; }
+.shootlist ol { margin: 0; padding-left: 22px; }
+.shootlist li { font-size: 13px; color: #3f3f46; line-height: 1.9; }
+.shootlist li a { color: #18181b; text-decoration: none; font-weight: 600; }
+.shootlist li a:hover { text-decoration: underline; }
+.shootlist .pr { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; border-radius: 999px; padding: 2px 8px; margin-left: 8px; vertical-align: 1px; }
+.pr-critical { background: #fef2f2; color: #b91c1c; }
+.pr-high { background: #fff7ed; color: #c2410c; }
+.pr-medium { background: #fefce8; color: #a16207; }
 .card { background: #fff; border-radius: 16px; border: 1.5px solid #e4e4e7; display: flex; overflow: hidden; margin-bottom: 12px; }
 .card.gap { border-left: 3px solid #ef4444; }
-.poster { width: 110px; min-width: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 10px; gap: 8px; text-align: center; }
-.gap-num { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; }
-.visual-cue { font-size: 10px; line-height: 1.5; color: #71717a; text-align: center; }
-.card-body { padding: 18px 20px; flex: 1; border-left: 1px solid #f4f4f5; }
+.gap-rail { width: 88px; min-width: 88px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px 10px; gap: 10px; }
+.gap-num { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.card-body { padding: 18px 20px; flex: 1; border-left: 1px solid #f4f4f5; min-width: 0; }
 .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .card-top h2 { font-size: 15px; font-weight: 600; }
 .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .06em; }
@@ -32,17 +42,24 @@ header .summary strong { color: #fff; }
 .badge-cov { background: #dcfce7; color: #15803d; }
 .card-body p { font-size: 13.5px; color: #3f3f46; line-height: 1.65; }
 .card-body p strong { color: #18181b; font-weight: 600; }
+.capture { margin-top: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 14px; }
+.capture .cap-label { font-weight: 700; color: #0369a1; text-transform: uppercase; font-size: 10.5px; letter-spacing: .06em; display: block; margin-bottom: 4px; }
+.capture .cap-text { font-size: 13px; color: #0c4a6e; line-height: 1.6; }
 .queries { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
 .queries .q-label { font-size: 11px; color: #a1a1aa; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
 .q-chip { font-size: 11.5px; background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b; border-radius: 999px; padding: 3px 10px; font-style: italic; text-decoration: none; display: inline-block; }
 a.q-chip { color: #2563eb; transition: background .15s, border-color .15s; }
 a.q-chip:hover { background: #eff6ff; border-color: #bfdbfe; }
-.near-miss { margin-top: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #78716c; line-height: 1.6; }
-.near-miss .nm-label { font-weight: 700; color: #b45309; text-transform: uppercase; font-size: 10.5px; letter-spacing: .06em; margin-right: 6px; }
+.near-miss { margin-top: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; display: flex; gap: 12px; align-items: flex-start; }
+.near-miss img { width: 54px; height: 96px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #e4e4e7; }
+.near-miss .nm-body { font-size: 12.5px; color: #78716c; line-height: 1.6; min-width: 0; }
+.near-miss .nm-label { font-weight: 700; color: #b45309; text-transform: uppercase; font-size: 10.5px; letter-spacing: .06em; display: block; margin-bottom: 3px; }
 .recharm-link { font-size: 12px; font-weight: 500; color: #2563eb; text-decoration: none; }
 .recharm-link:hover { text-decoration: underline; }
-.covered-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
-.covered-card { flex: 1 1 220px; min-width: 0; background: #fff; border: 1.5px solid #e4e4e7; border-radius: 12px; padding: 14px 16px; }
+.covered-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.covered-card { background: #fff; border: 1.5px solid #e4e4e7; border-radius: 12px; padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; }
+.covered-card img { width: 60px; height: 106px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #e4e4e7; }
+.covered-body { min-width: 0; }
 .covered-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
 .covered-top h3 { font-size: 13px; font-weight: 600; }
 .covered-cue { font-size: 11.5px; color: #71717a; line-height: 1.5; margin-bottom: 8px; }
@@ -50,11 +67,13 @@ a.q-chip:hover { background: #eff6ff; border-color: #bfdbfe; }
 .all-clear { background: #f0fdf4; border: 2px solid #16a34a; border-radius: 16px; padding: 24px 28px; }
 .all-clear h2 { font-size: 16px; font-weight: 700; color: #15803d; margin-bottom: 6px; }
 .all-clear p { font-size: 13.5px; color: #3f3f46; line-height: 1.65; }
+footer { padding: 24px 40px 0; font-size: 11.5px; color: #a1a1aa; }
 @media (max-width: 580px) {
-  header, .stats, .section { padding-left: 16px; padding-right: 16px; }
+  header, .stats, .section, footer { padding-left: 16px; padding-right: 16px; }
   .divider { margin: 8px 16px 0; }
-  .poster { width: 80px; min-width: 80px; }
-  .gap-num { width: 40px; height: 40px; font-size: 15px; }
+  .gap-rail { width: 64px; min-width: 64px; }
+  .gap-num { width: 38px; height: 38px; font-size: 14px; }
+  .covered-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -65,6 +84,7 @@ const DATA = __DATA_JSON__;
 
 const GAP_COLORS = ['#ef4444','#f97316','#d97706','#6366f1','#0891b2'];
 const GAP_BG     = ['#fef2f2','#fff7ed','#fffbeb','#f5f3ff','#ecfeff'];
+const PR_CLASS   = { critical: 'pr-critical', high: 'pr-high', medium: 'pr-medium' };
 
 function clipLink(brand, sym) {
   return `https://app.recharm.com/app/${brand}/?clipId=${sym}`;
@@ -76,33 +96,55 @@ function searchLink(brand, query) {
   return `https://app.recharm.com/app/${brand}/?section=${encodeURIComponent(section)}`;
 }
 
+function prChip(priority) {
+  if (!priority) return '';
+  const cls = PR_CLASS[priority.toLowerCase()] || 'pr-medium';
+  return `<span class="pr ${cls}">${priority}</span>`;
+}
+
+function shootList(gaps) {
+  if (!gaps.length) return '';
+  const items = gaps.map((g, i) =>
+    `<li><a href="#gap-${i + 1}">${g.title}</a>${prChip(g.priority)}</li>`
+  ).join('');
+  return `<div class="shootlist"><h2>📋 Shoot list — what to capture, in priority order</h2><ol>${items}</ol></div>`;
+}
+
 function gapCard(gap, i) {
   const brand = DATA.meta.brand;
-  const cues  = (gap.lookFor || '').split(/\s*·\s*|\n/).map(s => s.trim()).filter(Boolean);
   const queries = (gap.searchedFor || []).map(q =>
     `<a class="q-chip" href="${searchLink(brand, q)}" target="_blank">"${q}"</a>`
   ).join('');
   let nearMiss = '';
   if (gap.closestMatch && gap.closestMatch.clipSymbol) {
     const cm = gap.closestMatch;
+    const img = cm.posterUrl ? `<img src="${cm.posterUrl}" alt="Closest match poster" loading="lazy"/>` : '';
     nearMiss = `
       <div class="near-miss">
-        <span class="nm-label">Closest match</span>${cm.visualCue ? cm.visualCue + ' — ' : ''}${cm.whyNotEnough || ''}
-        <a class="recharm-link" href="${clipLink(brand, cm.clipSymbol)}" target="_blank">View clip →</a>
+        ${img}
+        <div class="nm-body">
+          <span class="nm-label">Closest we have — not enough</span>
+          ${cm.visualCue ? cm.visualCue + ' — ' : ''}${cm.whyNotEnough || ''}
+          <a class="recharm-link" href="${clipLink(brand, cm.clipSymbol)}" target="_blank">View clip →</a>
+        </div>
       </div>`;
   }
   return `
-    <div class="card gap">
-      <div class="poster" style="background:${GAP_BG[i % GAP_BG.length]}">
+    <div class="card gap" id="gap-${i + 1}">
+      <div class="gap-rail" style="background:${GAP_BG[i % GAP_BG.length]}">
         <div class="gap-num" style="background:${GAP_COLORS[i % GAP_COLORS.length]}">${i + 1}</div>
-        <div class="visual-cue">${cues.join('<br>')}</div>
       </div>
       <div class="card-body">
         <div class="card-top">
           <h2>${gap.title}</h2>
           <span class="badge badge-gap">Missing</span>
+          ${prChip(gap.priority)}
         </div>
         <p>${gap.whyUseful}</p>
+        <div class="capture">
+          <span class="cap-label">🎥 What to capture</span>
+          <span class="cap-text">${gap.lookFor}</span>
+        </div>
         ${queries ? `<div class="queries"><span class="q-label">Searched:</span>${queries}</div>` : ''}
         ${nearMiss}
       </div>
@@ -111,14 +153,18 @@ function gapCard(gap, i) {
 
 function coveredCard(c) {
   const brand = DATA.meta.brand;
+  const img = c.posterUrl ? `<img src="${c.posterUrl}" alt="${c.title} poster" loading="lazy"/>` : '';
   return `
     <div class="covered-card">
-      <div class="covered-top">
-        <h3>${c.title}</h3>
-        <span class="badge badge-cov">Covered</span>
+      ${img}
+      <div class="covered-body">
+        <div class="covered-top">
+          <h3>${c.title}</h3>
+          <span class="badge badge-cov">Covered</span>
+        </div>
+        <div class="covered-cue">${c.visualCue || ''}</div>
+        <a class="recharm-link" href="${clipLink(brand, c.clipSymbol)}" target="_blank">View clip →</a>
       </div>
-      <div class="covered-cue">${c.visualCue || ''}</div>
-      <a class="recharm-link" href="${clipLink(brand, c.clipSymbol)}" target="_blank">View clip →</a>
     </div>`;
 }
 
@@ -139,10 +185,18 @@ function render() {
         <span class="num" style="color:${gaps.length ? '#dc2626' : '#15803d'}">${gaps.length}</span>
         <span class="lbl" style="color:${gaps.length ? '#dc2626' : '#15803d'}">Gaps found</span>
       </div>
+      <div class="stat-sep"></div>
+      <div class="stat-pill" style="background:#dcfce7">
+        <span class="num" style="color:#15803d">${covered.length}</span>
+        <span class="lbl" style="color:#15803d">Covered</span>
+      </div>
     </div>`;
 
   if (gaps.length) {
-    html += `<div class="section"><div class="section-label">✦ Missing Footage — What to Shoot</div>`;
+    html += `<div class="section">
+      <div class="section-label">✦ Missing Footage — What to Shoot</div>
+      <div class="section-sub">Each card explains why the creative needs the shot and exactly what to capture. Click a search chip to re-run the audit query in Recharm.</div>`;
+    html += shootList(gaps);
     gaps.forEach((g, i) => { html += gapCard(g, i); });
     html += `</div>`;
   } else {
@@ -155,10 +209,12 @@ function render() {
   }
 
   if (covered.length) {
-    html += `<hr class="divider"/><div class="section"><div class="section-label">Already Covered</div><div class="covered-grid">`;
+    html += `<hr class="divider"/><div class="section"><div class="section-label">Already Covered</div><div class="section-sub">Verified against real clip frames — thumbnails show the actual footage.</div><div class="covered-grid">`;
     covered.forEach(c => { html += coveredCard(c); });
     html += `</div></div>`;
   }
+
+  html += `<footer>Generated ${meta.date || ''} · Audit: ${meta.shotIdeasConsidered} shot ideas, ${meta.searchesRun} visual searches, poster-frame verification on borderline hits.</footer>`;
 
   document.getElementById('root').innerHTML = html;
   document.title = `Footage Gaps — ${meta.brand}`;

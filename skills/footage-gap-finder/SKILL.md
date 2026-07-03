@@ -1,18 +1,23 @@
 ---
 name: footage-gap-finder
-description: Analyze a creative input — an ad concept, creative brief, ad transcript, script, or even a rough idea — and find which shot types are MISSING from the user's Recharm clip library. Use whenever the user asks "what footage are we missing", "find gaps in our library", "what do we need to shoot", "can our library support this idea", wants a shoot list of footage to capture before production, or wants to stress-test a creative concept against their existing clips. Brainstorms many shot types the concept calls for, searches the library visually for each, verifies hits by inspecting poster images, and delivers an HTML gap report explaining each missing shot and why it would be useful. Produces a findings report, NOT a brief — never use this when the user wants a brief or clip picks for an edit.
+description: Analyze a creative input — an ad concept, creative brief, ad transcript, script, or even a rough idea — and find which shot types are MISSING from the user's Recharm clip library. Use whenever the user asks "what footage are we missing", "find gaps in our library", "what do we need to shoot", "can our library support this idea", wants a shoot list of footage to capture before production, or wants to stress-test a creative concept against their existing clips. Brainstorms many shot types the concept calls for, searches the library visually for each, verifies hits by inspecting poster images, and delivers an HTML gap report (saved locally AND uploaded to a shareable Recharm URL) explaining each missing shot and why it would be useful. Produces a findings report, NOT a brief — never use this when the user wants a brief or clip picks for an edit.
 ---
 
 # Footage Gap Finder
 
-You are acting as a pre-production footage auditor. The user gives you a creative input — a polished brief, an ad transcript, a concept, or a one-line idea — and your job is to figure out what shots that idea _would need_, check whether the Recharm library actually has them, and report the ones it doesn't. The deliverable is an HTML gap report that a team can take straight into a shoot-planning meeting: each gap names the missing shot, why the creative needs it, and what to capture.
+You are acting as a pre-production footage auditor. The user gives you a creative input — a polished brief, an ad transcript, a concept, or a one-line idea — and your job is to figure out what shots that idea _would need_, check whether the Recharm library actually has them, and report the ones it doesn't. The deliverable is an HTML gap report that a team can take straight into a shoot-planning meeting: each gap names the missing shot, why the creative needs it, and what to capture. The report is saved locally **and** uploaded to Recharm's public-share storage so the user gets a shareable link.
 
-The Recharm MCP server provides: `list_brands`, `list_labels`, `search_clips_visually`, `get_clip_poster_image`, `get_clip_sprite_image`. Check the live tool schemas for current parameters.
+The Recharm MCP server provides: `list_brands`, `list_labels`, `search_clips_visually`, `get_clip_poster_image`, `get_clip_sprite_image`, `save_html_file`. Check the live tool schemas for current parameters.
+
+**Two kinds of "poster image" — don't confuse them:**
+
+- Every `search_clips_visually` hit already includes a `posterUrl` (a public HTTPS still-frame URL) plus `previewUrl` and `recharmUrl`. These URLs are what you embed in the HTML report — record the `posterUrl` for every clip you cite. No extra tool call is needed to get an image URL.
+- `get_clip_poster_image` / `get_clip_sprite_image` return raw JPEG bytes **for you to look at** when judging whether a clip really depicts a shot. They are your verification eyes, not a source of embeddable URLs.
 
 Three principles drive everything below:
 
 1. **Generate generously, verify ruthlessly.** Brainstorm far more shot ideas than you expect to be missing. The value of this skill is breadth — a gap you never thought to search for is a gap you'll never report.
-2. **Visual search always returns _something_.** `search_clips_visually` ranks by similarity; it never returns empty. A low cosine distance is encouraging and a high one is suspicious, but neither decides anything. A shot is only "covered" or "missing" after you have **looked at poster images** of the top hits and judged whether they actually depict the shot.
+2. **Visual search always returns _something_.** `search_clips_visually` ranks by similarity; it rarely returns empty. A low cosine distance is encouraging and a high one is suspicious, but neither decides anything. A shot is only "covered" or "missing" after you have **looked at poster images** of the top hits and judged whether they actually depict the shot. (An empty or near-empty result set, however, is a strong gap signal — note it.)
 3. **A gap is only worth reporting if you can argue for it.** Every gap in the report must say why this specific creative needs that shot — not "more footage is always nice".
 
 ## Step 1 — Brand
@@ -44,6 +49,8 @@ Work through the checklist. For each shot idea run **1–2 visual searches** wit
 
 If the first query for a shot comes back with nothing promising, try one rephrasing (different subject, framing, or setting) before judging — one bad query phrase shouldn't condemn a shot to gap status.
 
+While searching, **record `posterUrl` and `clipSymbol` for every hit you may cite later** — you'll need them for the report.
+
 ## Step 5 — Judge each shot: covered or gap (the heart of this skill)
 
 For each shot idea, look at the top hits' `cosineDistance` and descriptions, then **inspect poster images** with `get_clip_poster_image` for the hits that might plausibly match — typically the top 1–3. Judge each frame against the shot's visual description:
@@ -54,8 +61,8 @@ For each shot idea, look at the top hits' `cosineDistance` and descriptions, the
 
 Verdict per shot idea, one line each:
 
-- **Covered** — at least one inspected clip genuinely depicts the shot. Record the best clip's `clipSymbol` and a short visual description of its poster. Move on.
-- **Gap** — none of the inspected hits work. Record the queries you tried and, if there was a near-miss, the closest clip's `clipSymbol` and _why it falls short_ — that contrast makes the report persuasive.
+- **Covered** — at least one inspected clip genuinely depicts the shot. Record the best clip's `clipSymbol`, its `posterUrl`, and a short visual description of its poster. Move on.
+- **Gap** — none of the inspected hits work. Record the queries you tried and, if there was a near-miss, the closest clip's `clipSymbol`, its `posterUrl`, and _why it falls short_ — that contrast makes the report persuasive, and the thumbnail lets the reader see the miss for themselves.
 
 Shortcut for clear cases: if the top hit's metadata is unambiguous and its distance is strong, one poster check is enough to confirm coverage. Spend your image-inspection budget on the borderline shots — those are where false gaps and false coverage both live.
 
@@ -66,12 +73,13 @@ Shortcut for clear cases: if the top hit's metadata is unambiguous and its dista
 For each gap, prepare the fields the report needs:
 
 - **Title** — short shot name (e.g. "Late-night doomscroll hook")
+- **Priority** — `Critical` (the ad cannot be cut without it), `High` (weakens the core narrative if missing), or `Medium` (nice-to-have variety/coverage). The report renders these as chips and a prioritized shoot list.
 - **What to capture** — a literal, shootable description a videographer could act on: subject, action, setting, framing
 - **Why it's useful** — tie it to the creative: which beat it unlocks, what the ad loses without it. This is the argument; make it concrete.
 - **What was searched** — the query phrases tried, so the user can trust (or re-run) the audit
-- **Closest existing clip** (optional) — the near-miss and why it doesn't work
+- **Closest existing clip** (optional) — the near-miss (`clipSymbol` + `posterUrl`) and why it doesn't work
 
-Then rank gaps by how much they'd hurt the creative if left unfilled — hook and proof gaps usually outrank b-roll gaps.
+Then rank gaps by how much they'd hurt the creative if left unfilled — hook and proof gaps usually outrank b-roll gaps. Order = priority order in the shoot list.
 
 ## Step 7 — Build the HTML report
 
@@ -93,11 +101,13 @@ The report is generated by merging your findings into a pre-built template — y
   "gaps": [
     {
       "title": "<short shot name>",
-      "lookFor": "<what to capture · shootable visual description · dot-separated cues>",
+      "priority": "Critical | High | Medium",
+      "lookFor": "<what to capture — a full, shootable sentence or two: subject, action, setting, framing>",
       "whyUseful": "<why the creative needs this shot. Use <strong> tags for key phrases.>",
       "searchedFor": ["<query 1>", "<query 2>"],
       "closestMatch": {
         "clipSymbol": "<clipSymbol>",
+        "posterUrl": "<posterUrl from the search hit>",
         "visualCue": "<short visual description of that clip's poster>",
         "whyNotEnough": "<one sentence on why it falls short>"
       }
@@ -107,7 +117,8 @@ The report is generated by merging your findings into a pre-built template — y
     {
       "title": "<short shot name>",
       "visualCue": "<short visual description of the best clip's poster>",
-      "clipSymbol": "<best clipSymbol>"
+      "clipSymbol": "<best clipSymbol>",
+      "posterUrl": "<posterUrl from the search hit>"
     }
   ]
 }
@@ -115,10 +126,11 @@ The report is generated by merging your findings into a pre-built template — y
 
 Field notes:
 
-- Order `gaps` by impact (Step 6 ranking) — the template numbers them in order.
-- `closestMatch` is optional; omit the key when no hit was even close.
+- Order `gaps` by impact (Step 6 ranking) — the template numbers them and builds the shoot list in this order.
+- `closestMatch` is optional; omit the key when no hit was even close. When present, always include its `posterUrl` so the reader can see the near-miss.
 - Every shot idea from your checklist (both waves) must land in either `gaps` or `covered`. Silent drops undermine trust in the audit.
-- `lookFor` and `visualCue` use `·` as separator (e.g. `"Hand silencing alarm · Dark bedroom · Phone glow"`).
+- `posterUrl` values must be copied **verbatim** from `search_clips_visually` hits — never construct or guess media URLs.
+- `lookFor` is rendered in a highlighted "What to capture" box — write it as direction a videographer can shoot from, not fragment cues.
 - `whyUseful` and `meta.summary` support inline HTML (`<strong>`, `<em>`). Keep each 2–4 sentences max.
 - `clipSymbol` is used to construct "View clip" Recharm links automatically.
 
@@ -147,15 +159,25 @@ print(f"Written: {out}")
 
 **Critical — always use `json.dumps(data)`, never hand-write the JSON.** Manually constructing the JSON string inline (e.g. typing `{"meta": {...}, "gaps": [` directly into a Write tool call) is structurally fragile: an unclosed array or mismatched bracket produces a blank HTML report with no error message. Build the `data` dict as a Python object and let `json.dumps` serialize it — it is the only safe path.
 
-Present the output file to the user and give a 3–5 sentence chat summary: how many gaps, the most important one or two, and the overall verdict on whether the library can carry the concept.
+## Step 8 — Upload and share
+
+After the local file is written, upload the **same HTML string** with `save_html_file(brandName, html)`. It returns a public shareable URL.
+
+Deliver both to the user:
+
+1. The local HTML file (present it so they can open it from their machine)
+2. The shareable URL (for dropping into Slack/email — it renders the identical report, including poster thumbnails, since `posterUrl`s are public)
+
+Close with a 3–5 sentence chat summary: how many gaps, the one or two most important, and the overall verdict on whether the library can carry the concept.
 
 ## What not to do
 
-- Don't call `save_brief` — this skill produces a findings report, not a brief. This holds even if the input was a brief.
+- Don't call `save_brief` — this skill produces a findings report, not a brief. This holds even if the input was a brief. (`save_html_file` for the finished report is expected — that's Step 8.)
 - Don't declare a shot covered or missing from search scores alone — verdicts require inspecting poster (or sprite) images.
 - Don't condemn a shot to gap status off a single query phrasing — try a rephrase first.
 - Don't invent label values — only filter with values returned by `list_labels`.
 - Don't pad the report with generic gaps ("more b-roll") that aren't tied to a beat of this creative.
 - Don't drop shot ideas silently — every idea ends up in `gaps` or `covered`.
-- Don't construct media URLs by hand — the MCP does not expose embeddable poster/video URLs; use the `app.recharm.com` clip links the template generates.
+- Don't construct media URLs by hand — embed only `posterUrl` / `recharmUrl` values copied verbatim from `search_clips_visually` hits.
+- Don't call `get_clip_poster_image` to fetch URLs for the report — it returns image bytes for your own inspection; the embeddable URL is already on the search hit.
 - Don't stop after the first wave if everything is covered — escalate to more ambitious shot ideas.
