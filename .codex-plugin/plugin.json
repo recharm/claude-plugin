@@ -1,0 +1,40 @@
+{
+  "name": "recharm",
+  "version": "0.1.17",
+  "description": "Turn creative briefs into shot lists and find matching footage in your Recharm library.",
+  "author": {
+    "name": "Recharm",
+    "url": "https://www.recharm.com",
+    "email": "support@recharm.com"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recharm",
+    "shortDescription": "Find Recharm footage for creative briefs.",
+    "longDescription": "Turn a creative brief into a sectioned shot list, search Recharm\u2019s library for matching footage, review candidates visually, and produce a final brief with picks.",
+    "developerName": "Recharm",
+    "category": "Productivity",
+    "capabilities": [
+      "Search",
+      "Write"
+    ],
+    "websiteURL": "https://www.recharm.com",
+    "defaultPrompt": [
+      "Find footage for this creative brief.",
+      "What footage is missing from my library?",
+      "Turn this script into a shot list with clip picks."
+    ]
+  },
+  "mcpServers": "./.mcp.json",
+  "homepage": "https://www.recharm.com",
+  "repository": "https://github.com/recharm/claude-plugin",
+  "license": "MIT",
+  "keywords": [
+    "recharm",
+    "ad creative",
+    "video",
+    "brief",
+    "visual search",
+    "footage finder"
+  ]
+}
