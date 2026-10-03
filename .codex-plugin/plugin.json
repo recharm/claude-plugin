@@ -19,11 +19,16 @@
       "Write"
     ],
     "websiteURL": "https://www.recharm.com",
+    "privacyPolicyURL": "https://www.recharm.com/privacy-policy",
+    "termsOfServiceURL": "https://www.recharm.com/terms-of-service",
     "defaultPrompt": [
       "Find footage for this creative brief.",
       "What footage is missing from my library?",
       "Turn this script into a shot list with clip picks."
-    ]
+    ],
+    "brandColor": "#332A6F",
+    "composerIcon": "./assets/Recharm_Logo_Icon_transparent_background.png",
+    "logo": "./assets/Recharm_Logo_Icon_transparent_background.png"
   },
   "mcpServers": "./.mcp.json",
   "homepage": "https://www.recharm.com",
