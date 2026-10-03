@@ -9,7 +9,6 @@
       "source": {
         "source": "url",
         "url": "https://github.com/recharm/claude-plugin.git",
-        "path": "./",
         "ref": "main"
       },
       "policy": {

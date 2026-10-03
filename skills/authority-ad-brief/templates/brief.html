@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Authority Ad Brief</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #888;
+    --accent: #f5a623;
+    --arc-hook: #e05a3a;
+    --arc-social: #9b59b6;
+    --arc-bridge: #1abc9c;
+    --arc-reveal: #f5a623;
+    --arc-benefit: #2ecc71;
+    --arc-resolution: #3498db;
+    --arc-cta: #e74c3c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.6; }
+  a { color: inherit; }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 32px 40px 24px;
+  }
+  .header-meta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 10px; }
+  .header-title { font-size: 26px; font-weight: 700; line-height: 1.25; margin-bottom: 14px; }
+
+  /* Filter chips under the title */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 6px; border-radius: 999px;
+    background: var(--surface2); border: 1px solid var(--border);
+    font-size: 11px; color: var(--text); line-height: 1.4;
+  }
+  .chip-cat {
+    padding: 1px 7px; border-radius: 999px;
+    background: rgba(245,166,35,0.12); color: var(--accent);
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* ── Why this approach ── */
+  .why-section {
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px 32px;
+    background: var(--surface);
+  }
+  .why-heading {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); margin-bottom: 16px;
+  }
+  .why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; } }
+  .why-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 20px;
+  }
+  .why-card h3 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--accent); }
+  .why-card p { font-size: 13px; color: #bbb; line-height: 1.7; }
+
+  /* Arc strip — the narrative structure at a glance */
+  .arc-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .arc-step {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 11px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .arc-step .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .arc-step .arrow { color: var(--muted); font-weight: 400; margin-left: 2px; }
+  .arc-strip-caption { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* ── Hook hero ── */
+  .hook-hero {
+    background: linear-gradient(135deg, #1a1000 0%, #0d0d0d 60%);
+    border-bottom: 1px solid var(--border);
+    padding: 36px 40px;
+  }
+  .hook-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); margin-bottom: 14px;
+  }
+  .hook-label::before { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .hook-line {
+    font-size: 28px; font-weight: 700; line-height: 1.3;
+    color: #fff; max-width: 700px; margin-bottom: 16px;
+  }
+  .hook-pattern-badge {
+    display: inline-block; padding: 4px 10px;
+    background: rgba(245,166,35,0.15); border: 1px solid rgba(245,166,35,0.3);
+    border-radius: 4px; font-size: 11px; color: var(--accent);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .hook-rationale {
+    font-size: 14px; color: #aaa; max-width: 680px; line-height: 1.7;
+  }
+
+  /* ── Rejected hooks ── */
+  .rejected-section {
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+  }
+  .rejected-toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 18px 0; cursor: pointer;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
+    border: none; background: none; color: var(--muted); width: 100%; text-align: left;
+    transition: color 0.15s;
+  }
+  .rejected-toggle:hover { color: var(--text); }
+  .toggle-icon { transition: transform 0.2s; font-style: normal; }
+  .rejected-toggle.open .toggle-icon { transform: rotate(90deg); }
+  .rejected-list { display: none; padding-bottom: 20px; }
+  .rejected-list.visible { display: block; }
+  .rejected-item {
+    display: grid; grid-template-columns: 160px 1fr; gap: 12px 20px;
+    padding: 12px 0; border-top: 1px solid var(--border);
+  }
+  .rejected-pattern { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .rejected-line { font-size: 13px; color: #bbb; margin-bottom: 4px; font-style: italic; }
+  .rejected-reason { font-size: 12px; color: var(--muted); }
+
+  /* ── Scenes ── */
+  .scenes { padding: 32px 40px; display: flex; flex-direction: column; gap: 48px; }
+
+  .scene { border-top: 1px solid var(--border); padding-top: 28px; }
+  .scene-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+  .scene-index {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; background: var(--surface2); color: var(--muted);
+  }
+  .scene-meta { flex: 1; }
+  .arc-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .scene-name { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .scene-description { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 680px; }
+
+  /* ── Clips grid ── */
+  /* Cards are portrait: most library clips are 9:16 vertical ad footage */
+  .clips-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin-top: 18px; max-width: 1100px; }
+
+  .clip-card {
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border); background: var(--surface);
+    transition: border-color 0.15s, transform 0.15s;
+    display: flex; flex-direction: column;
+  }
+  .clip-card:hover { border-color: #444; transform: translateY(-1px); }
+
+  .clip-thumb {
+    position: relative; width: 100%; aspect-ratio: 9 / 16;
+    background: #111; overflow: hidden;
+  }
+  .clip-thumb img,
+  .clip-thumb video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; /* never crop — footage ratios vary */
+  }
+  .clip-thumb video { opacity: 0; transition: opacity 0.2s; }
+  .clip-card:hover .clip-thumb video { opacity: 1; }
+  .clip-card:hover .clip-thumb img { opacity: 0; }
+
+  .clip-info { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .clip-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+  a.clip-name:hover { color: var(--accent); text-decoration: underline; }
+  .clip-meta-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .clip-dist {
+    font-size: 10px; padding: 2px 6px; border-radius: 3px;
+    background: var(--surface2); color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .clip-dist.good { background: rgba(46,204,113,0.1); color: #2ecc71; }
+  .clip-dist.ok { background: rgba(245,166,35,0.1); color: var(--accent); }
+  .clip-dist.weak { background: rgba(231,76,60,0.1); color: #e74c3c; }
+
+  /* Search-result provenance link */
+  .clip-query {
+    font-size: 10px; color: var(--muted); font-style: italic;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-decoration: none;
+  }
+  a.clip-query:hover { color: var(--accent); text-decoration: underline; }
+
+  /* View / Find-similar actions (stacked — cards are narrow) */
+  .clip-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 4px; }
+  .clip-btn {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    padding: 5px 8px; border-radius: 5px; font-size: 10.5px; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    text-decoration: none; transition: background 0.15s, border-color 0.15s;
+  }
+  .clip-btn:hover { background: #262626; border-color: #555; }
+  .clip-btn.primary { background: rgba(245,166,35,0.12); border-color: rgba(245,166,35,0.35); color: var(--accent); }
+  .clip-btn.primary:hover { background: rgba(245,166,35,0.2); }
+
+  .no-clips {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px; background: var(--surface2); border-radius: 6px;
+    font-size: 12px; color: var(--muted); border: 1px dashed var(--border);
+    margin-top: 12px;
+  }
+  .no-clips::before { content: '🎥'; font-size: 16px; }
+
+  /* ── Arc segment colors ── */
+  .arc-Hook         { background: rgba(224,90,58,0.15);  color: var(--arc-hook);       }
+  .arc-Social       { background: rgba(155,89,182,0.15); color: var(--arc-social);     }
+  .arc-Bridge       { background: rgba(26,188,156,0.15); color: var(--arc-bridge);     }
+  .arc-Reveal       { background: rgba(245,166,35,0.15); color: var(--arc-reveal);     }
+  .arc-Benefit      { background: rgba(46,204,113,0.15); color: var(--arc-benefit);    }
+  .arc-Resolution   { background: rgba(52,152,219,0.15); color: var(--arc-resolution); }
+  .arc-CTA          { background: rgba(231,76,60,0.15);  color: var(--arc-cta);        }
+
+  /* ── Footer ── */
+  .footer {
+    border-top: 1px solid var(--border); padding: 20px 40px;
+    font-size: 11px; color: var(--muted); display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<script>
+// ── Data injected by the skill ──────────────────────────────────────────────
+const BRIEF = __BRIEF_DATA_JSON__;
+// ────────────────────────────────────────────────────────────────────────────
+
+// Arc segment → CSS class slug
+const ARC_CLASS = {
+  "Hook": "Hook",
+  "Credential Stack": "Social",
+  "Expert Insight": "Bridge",
+  "Product Reveal": "Reveal",
+  "Benefit Payoff": "Benefit",
+  "Endorsement Seal": "Resolution",
+  "CTA": "CTA",
+};
+
+// Narrative arc, rendered as a strip so any reader gets the structure at a glance
+const ARC_STEPS = [
+  { name: "Hook", slug: "hook", var: "--arc-hook" },
+  { name: "Credential Stack", slug: "social", var: "--arc-social" },
+  { name: "Expert Insight", slug: "bridge", var: "--arc-bridge" },
+  { name: "Product Reveal", slug: "reveal", var: "--arc-reveal" },
+  { name: "Benefit Payoff", slug: "benefit", var: "--arc-benefit" },
+  { name: "Endorsement Seal", slug: "resolution", var: "--arc-resolution" },
+  { name: "CTA", slug: "cta", var: "--arc-cta" },
+];
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function distClass(d) {
+  if (d == null) return "";
+  if (d < 0.18) return "good";
+  if (d < 0.28) return "ok";
+  return "weak";
+}
+
+// Recharm visual-search results page for a query — shows the full ranked result
+// set, including the clips that were considered but not picked. e.g.
+// https://app.recharm.com/app/<brand>/?section=virtual%3AVisual+Search%3A%40<ts>%3AClip%3A<query>
+function visualSearchUrl(searchString) {
+  if (!searchString || !BRIEF.brand) return null;
+  const section = `virtual:Visual Search:@${Date.now()}:Clip:${searchString}`;
+  const params = new URLSearchParams({ section });
+  return `https://app.recharm.com/app/${encodeURIComponent(BRIEF.brand)}/?${params.toString()}`;
+}
+
+// Direct link to a clip in the Recharm app, e.g.
+// https://app.recharm.com/app/<brand>/?clipId=%22<clip symbol>%22
+function clipUrl(clipSymbol) {
+  if (!clipSymbol || !BRIEF.brand) return null;
+  const params = new URLSearchParams({ clipId: `"${clipSymbol}"` });
+  return `https://app.recharm.com/app/${encodeURIComponent(BRIEF.brand)}/?${params.toString()}`;
+}
+
+function renderClip(clip) {
+  const dist = clip.cosineDistance;
+  const distLabel = dist != null ? dist.toFixed(3) : "—";
+  const poster = clip.posterUrl || "";
+  const preview = clip.previewUrl || "";
+  const view = clipUrl(clip.clipSymbol);
+  const searchUrl = visualSearchUrl(clip.searchString);
+
+  const nameHtml = view
+    ? `<a class="clip-name" href="${esc(view)}" target="_blank" rel="noopener" title="${esc(clip.clipName)} — open in Recharm">${esc(clip.clipName)}</a>`
+    : `<div class="clip-name" title="${esc(clip.clipName)}">${esc(clip.clipName)}</div>`;
+
+  const actions = [];
+  if (view) actions.push(`<a class="clip-btn primary" href="${esc(view)}" target="_blank" rel="noopener">▶ View clip</a>`);
+  if (searchUrl) actions.push(`<a class="clip-btn" href="${esc(searchUrl)}" target="_blank" rel="noopener" title="See all visual search results for: ${esc(clip.searchString)}">🔍 Find similar</a>`);
+
+  return `
+    <div class="clip-card">
+      <div class="clip-thumb">
+        <img src="${esc(poster)}" alt="${esc(clip.clipName)}" loading="lazy">
+        ${preview ? `<video src="${esc(preview)}" ${poster ? `poster="${esc(poster)}"` : ""} muted loop playsinline preload="none"
+          onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0;"></video>` : ""}
+      </div>
+      <div class="clip-info">
+        ${nameHtml}
+        <div class="clip-meta-row">
+          <span class="clip-dist ${distClass(dist)}">dist ${distLabel}</span>
+        </div>
+        <span class="clip-query" title="${esc(clip.searchString || "")}">"${esc(clip.searchString || "")}"</span>
+        ${actions.length ? `<div class="clip-actions">${actions.join("")}</div>` : ""}
+      </div>
+    </div>`;
+}
+
+function renderScene(scene, i) {
+  const arcSlug = ARC_CLASS[scene.arcSegment] || "Hook";
+  const clips = (scene.clips || []).map(renderClip).join("");
+  const clipsHtml = clips
+    ? `<div class="clips-grid">${clips}</div>`
+    : `<div class="no-clips">No strong library matches — custom shoot recommended for this scene.</div>`;
+  return `
+    <div class="scene">
+      <div class="scene-header">
+        <div class="scene-index">${i + 1}</div>
+        <div class="scene-meta">
+          <span class="arc-badge arc-${arcSlug}">${esc(scene.arcSegment)}</span>
+          <div class="scene-name">${esc(scene.name)}</div>
+          <div class="scene-description">${esc(scene.description)}</div>
+        </div>
+      </div>
+      ${clipsHtml}
+    </div>`;
+}
+
+function renderRejected(r) {
+  return `
+    <div class="rejected-item">
+      <div class="rejected-pattern">${esc(r.pattern)}</div>
+      <div>
+        <div class="rejected-line">"${esc(r.line)}"</div>
+        <div class="rejected-reason">${esc(r.reason)}</div>
+      </div>
+    </div>`;
+}
+
+function toggleRejected(btn) {
+  btn.classList.toggle("open");
+  document.getElementById("rejected-list").classList.toggle("visible");
+}
+
+function renderChips() {
+  let chips = BRIEF.filterChips;
+  if (!chips || !chips.length) {
+    // Fallback for payloads without filterChips
+    chips = [];
+    if (BRIEF.actorType) chips.push({ category: "Actor", value: BRIEF.actorType });
+    if (BRIEF.scenes) chips.push({ category: "Scenes", value: String(BRIEF.scenes.length) });
+  }
+  document.getElementById("header-chips").innerHTML = chips.map(c =>
+    `<span class="chip"><span class="chip-cat">${esc(c.category)}</span>${esc(c.value)}</span>`
+  ).join("");
+}
+
+function renderWhy() {
+  const why = BRIEF.why || {};
+  document.getElementById("why-explainer").textContent = why.explainer ||
+    "An authority ad borrows the credibility of a qualified voice — a doctor, coach, scientist, or certification — so the viewer defers to trusted judgment instead of evaluating from scratch. Establish the credential, then spend it on the product.";
+  document.getElementById("why-brandfit").textContent = why.brandFit ||
+    "Brands with real expertise behind them — formulations, certifications, pro users, published results — are natural fits: the credential already exists and simply needs to be put on screen.";
+  document.getElementById("why-brand-name").textContent = BRIEF.brand || "this brand";
+
+  document.getElementById("arc-strip").innerHTML = ARC_STEPS.map((s, i) =>
+    `<span class="arc-step"><span class="dot" style="background:var(${s.var})"></span>${s.name}${i < ARC_STEPS.length - 1 ? '<span class="arrow">→</span>' : ""}</span>`
+  ).join("");
+}
+
+function render() {
+  document.title = BRIEF.title + " — Authority Ad Brief";
+
+  document.getElementById("header-meta").textContent =
+    `${BRIEF.brand || ""} · Authority Ad Brief · ${BRIEF.generatedAt || ""}`;
+  document.getElementById("header-title").textContent = BRIEF.title;
+  renderChips();
+  renderWhy();
+
+  document.getElementById("hook-pattern").textContent = BRIEF.hook.pattern;
+  document.getElementById("hook-line").textContent = `"${BRIEF.hook.line}"`;
+  document.getElementById("hook-rationale").textContent = BRIEF.hook.rationale;
+
+  const rej = BRIEF.rejectedHooks || [];
+  document.getElementById("rejected-count").textContent =
+    `${rej.length} rejected hook${rej.length !== 1 ? "s" : ""}`;
+  document.getElementById("rejected-list").innerHTML = rej.map(renderRejected).join("");
+
+  document.getElementById("scenes").innerHTML =
+    (BRIEF.scenes || []).map(renderScene).join("");
+}
+
+document.addEventListener("DOMContentLoaded", render);
+</script>
+
+<!-- ── Layout ────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-meta" id="header-meta"></div>
+  <div class="header-title" id="header-title"></div>
+  <div class="chips" id="header-chips"></div>
+</div>
+
+<div class="why-section">
+  <div class="why-heading">Why this approach</div>
+  <div class="why-grid">
+    <div class="why-card">
+      <h3>What is a authority ad?</h3>
+      <p id="why-explainer"></p>
+    </div>
+    <div class="why-card">
+      <h3>Why it works for <span id="why-brand-name"></span></h3>
+      <p id="why-brandfit"></p>
+    </div>
+  </div>
+  <div class="arc-strip" id="arc-strip"></div>
+  <div class="arc-strip-caption">The 7-beat narrative arc every scene below maps to — credibility builds until the Product Reveal shows what passes the expert's standard.</div>
+</div>
+
+<div class="hook-hero">
+  <div class="hook-label">Selected Hook</div>
+  <div class="hook-pattern-badge" id="hook-pattern"></div>
+  <div class="hook-line" id="hook-line"></div>
+  <div class="hook-rationale" id="hook-rationale"></div>
+</div>
+
+<div class="rejected-section">
+  <button class="rejected-toggle" onclick="toggleRejected(this)">
+    <span class="toggle-icon">▶</span>
+    <span id="rejected-count">Rejected hooks</span>
+  </button>
+  <div class="rejected-list" id="rejected-list"></div>
+</div>
+
+<div class="scenes" id="scenes"></div>
+
+<div class="footer">
+  <span>Authority Ad Brief — Recharm</span>
+  <span id="footer-date"></span>
+</div>
+<script>document.getElementById("footer-date").textContent = new Date().toLocaleDateString();</script>
+
+</body>
+</html>
