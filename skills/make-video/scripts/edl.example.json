@@ -1,0 +1,206 @@
+{
+  "_about": "SCHEMA EXAMPLE ONLY - the clips, URLs and claims below belong to a different brand (fitlitter) and exist to show the EDL shape; never reuse them for another brand. Worked example: a 20s VO-led Problem -> Solution ad for Fit Litter crystals, 9:16, from fitlitter library clips (search_clips_visually, 2026-09-29). Every clip was sprite-checked and probed; the render was verified (1080x1920, 20.00s) and QC-checked with contact_sheet.mjs. On-screen claims are quoted from fitlitter.com.au (99% dust-free; 4x better odour control - site source: 28-day ammonia test vs paper).",
+  "_schema": {
+    "output": "path for the rendered MP4, relative to this file. Default out/ad.mp4",
+    "aspect": "\"9:16\" (1080x1920) or \"16:9\" (1920x1080). Ask the user. Caption size and side margins adapt automatically.",
+    "width/height": "only to force an off-spec size; set both.",
+    "fps": "default 30. Every segment is normalized to this (library clips range 24-60fps).",
+    "targetDuration": "15, 20, 25 or custom. Builder warns if the render misses by >0.5s.",
+    "fit": "cover | contain | blurfill - default cover. Most fitlitter UGC displays portrait (many are stored landscape with a -90 rotation flag - the builder reads it): cover in 9:16, blurfill in 16:9. Landscape clips (podcast, some pro shoots): cover in 16:9; in 9:16 cover + anchorX (one subject) or blurfill.",
+    "cacheDir": "downloads cached here. Default .adcache",
+    "workDir": "scratch dir, wiped each run. Default .adwork. On Windows use a SHORT path like C:/adwork (260-char cwd limit).",
+    "segments[]": {
+      "clipSymbol": "for readable logs",
+      "url | file": "clip downloadUrl, rawVideoDownloadUrl, or a local path (a Remotion render, a user upload)",
+      "in / out": "seconds into the source. Always set them - library clips run 10-130s.",
+      "fit": "per-segment override",
+      "anchorX / anchorY": "where a cover-crop sits: 0 = left/top, 0.5 = centre (default), 1 = right/bottom. Only matters when the source orientation differs from the output (landscape crew/aerial clips in a 9:16 ad). clips.json has suggestedAnchorX916 for those.",
+      "move": "pushin | pullback | glideleft | glideright | glideup | glidedown - motion without a cut.",
+      "moveAmount": "default 0.10, keep under ~0.15",
+      "transition": "how this segment ENTERS: \"cut\" (default) or {type, duration}. Types: fade, dissolve, fadeblack, fadewhite, swipe*, smooth*, wipe*, reveal*, cover*, circleopen, circleclose, radial, zoomin, squeezeh, squeezev, pixelize, hblur. Directions: left/right/up/down.",
+      "audioLead": "J-cut: seconds this segment's AUDIO starts before its picture. Needs keepClipAudio true (creator A-roll / mixed ads).",
+      "audioTail": "L-cut: seconds this segment's audio continues after its picture ends. Needs keepClipAudio true.",
+      "anchorX": "where a cover-crop sits: 0 = left/top, 0.5 = centre (default), 1 = right/bottom. Matters when source orientation differs from the output. Check the subject (cat, tray, hand) stays in the crop across in/out."
+    },
+    "audio": {
+      "voiceover": "{ file, gainDb (0), delay (0.2) }",
+      "music": "{ file, duck (true), duckDb (-9), fadeOut (1.0), offsetDb (-4) }. LEAVE gainDb OUT: the builder measures speech and bed with EBU R128 and places the bed offsetDb (4dB) under the voice.",
+      "keepClipAudio": "default false. false for every VO-led cut (B-roll/No Actor, some carry off-camera narration). true for testimonial / mashup / mixed A-roll ads.",
+      "loudnorm / targetLufs": "default true / -14"
+    },
+    "captions[]": {
+      "start / end": "seconds on the OUTPUT timeline (the builder prints it - transitions shorten it)",
+      "text | lines": "4-5 words visible at once; lines[] + stagger for an ordered list",
+      "band": "upper | middle | lower - pick per shot so it clears the cat, the tray, faces and any burned-in text",
+      "anim": "fadeup (default) | fadedown | fade | slideleft | slideright | pop | punch | none. One punch per ad.",
+      "exit": "cut - drops the fade-out",
+      "color": "#RRGGBB"
+    },
+    "captionStyle": "{ font (PT Sans - bundled, the site font), fontSize, primary (#FFFFFF), outline (#1F2621), outlineWidth, bold (true) } - override with the user's guidelines if supplied"
+  },
+  "_script": "Litter all over your floors? [FAK] Soggy paper, every single day. [FKS] With Fit Litter, you just scoop the poop. [GEG] Ninety-nine percent dust-free crystals with four times better odour control. [XWH] Less smell, less mess, less work - shop fitlitter dot com dot a-u. [XMT] - 43 words at ~2.6 w/s = ~16.5s under a 20s picture, leaving air for the hook and the end beat.",
+  "_notes": "(1) VO-led: every clip is Actor B-roll or No Actor and keepClipAudio is false. (2) Problem half joins fast (0.25s swipe); solution half slow (0.5s smooth + a pushin). (3) The pivot FKS -> GEG is the one match cut: same scoop action and framing, so a hard cut. (4) FAK/FKS are competitor paper litter - fine for a crystal ad, never for an ECO (paper) ad. (5) Rejected on review: NCN end card (shows the ECO bag, burned-in Subscribe Now), WOO/WON/WOP end cards (20% off promo - only if the user confirms it is live).",
+  "output": "out/fitlitter-problem-solution-20s-9x16.mp4",
+  "aspect": "9:16",
+  "fps": 30,
+  "targetDuration": 20,
+  "fit": "cover",
+  "workDir": "C:/adwork",
+  "segments": [
+    {
+      "_beat": "HOOK - Matthew sweeping scattered litter off a carpet (Paper Litter Tracked On Floor, Actor B-roll). Wall-only frames after ~7s.",
+      "clipSymbol": "FAK",
+      "_clipName": "FAK - Cleaning",
+      "url": "https://recharm-content-library.s3-accelerate.amazonaws.com/fitlitter/clips/source/final/3OJjcEeqxbEToCijn0qO.mp4",
+      "in": 0.4,
+      "out": 3.6
+    },
+    {
+      "_beat": "AGITATION - scoop lifting soggy grey paper pellets from a teal tray (No Actor).",
+      "clipSymbol": "FKS",
+      "_clipName": "FKS - Cleaning",
+      "url": "https://recharm-content-library.s3-accelerate.amazonaws.com/fitlitter/clips/source/final/kRujlUAMVhKVfk2dPswv2.mp4",
+      "in": 1,
+      "out": 4,
+      "transition": {
+        "type": "swipeleft",
+        "duration": 0.25
+      },
+      "_why": "Problem half: hard and quick."
+    },
+    {
+      "_beat": "PIVOT - the same scoop move into white Fit Litter crystals (No Actor). THE match cut: scoop -> scoop, so a hard cut.",
+      "clipSymbol": "GEG",
+      "_clipName": "GEG - Person Using Product",
+      "url": "https://recharm-content-library.s3-accelerate.amazonaws.com/fitlitter/clips/source/final/gpoa7RzJB2BAXAtOKjvkZ.mp4",
+      "in": 0.5,
+      "out": 5.4,
+      "transition": "cut",
+      "_why": "Match cut on the pivot - same framing and action continue across the cut."
+    },
+    {
+      "_beat": "PROOF - black cat stepping into a tray of crystals (Kelsey, No Actor). Stored 2160x3840 portrait.",
+      "clipSymbol": "XWH",
+      "_clipName": "XWH - Cat Using Product",
+      "url": "https://recharm-content-library.s3-accelerate.amazonaws.com/fitlitter/clips/source/final/BZnyQwA1s0rhuFJSYw7h.mp4",
+      "in": 2,
+      "out": 8,
+      "move": "pushin",
+      "moveAmount": 0.08,
+      "transition": {
+        "type": "smoothright",
+        "duration": 0.5
+      },
+      "_why": "Solution half: slow, smooth, rightward = forward."
+    },
+    {
+      "_beat": "CTA - white Fit Litter bag beside a hooded tray (Charli, No Actor), slow drift.",
+      "clipSymbol": "XMT",
+      "_clipName": "XMT - Product Shot",
+      "url": "https://recharm-content-library.s3-accelerate.amazonaws.com/fitlitter/clips/source/final/bBn2LrxaDgtWPlMBFQgb.mp4",
+      "in": 3,
+      "out": 7.15,
+      "transition": {
+        "type": "smoothdown",
+        "duration": 0.5
+      },
+      "_why": "Down onto the call to action."
+    }
+  ],
+  "audio": {
+    "voiceover": {
+      "file": "vo.mp3",
+      "gainDb": 0,
+      "delay": 0.2
+    },
+    "music": {
+      "file": "bed.mp3",
+      "duck": true,
+      "duckDb": -9,
+      "fadeOut": 1
+    },
+    "keepClipAudio": false,
+    "_music": "No gainDb on purpose - the builder places the bed 4dB under the VO by measurement. vo.mp3 from ElevenLabs creative_generate_speech (or the user's upload); bed.mp3 from creative_generate_in_flow (node_type music) or the user's upload. The verified render was made with the audio block reduced to {keepClipAudio:false} (captions only)."
+  },
+  "captions": [
+    {
+      "start": 0.15,
+      "end": 1.9,
+      "text": "LITTER EVERYWHERE?",
+      "band": "upper",
+      "anim": "pop",
+      "exit": "cut"
+    },
+    {
+      "start": 1.9,
+      "end": 3.1,
+      "text": "On your floors. Again.",
+      "band": "upper",
+      "anim": "fadeup",
+      "exit": "cut"
+    },
+    {
+      "start": 3.2,
+      "end": 5.8,
+      "text": "Soggy paper, every day",
+      "band": "upper",
+      "anim": "fadeup",
+      "exit": "cut"
+    },
+    {
+      "start": 6,
+      "end": 8.4,
+      "text": "Just scoop the poop.",
+      "band": "upper",
+      "anim": "punch",
+      "color": "#F9DD9F"
+    },
+    {
+      "start": 8.6,
+      "end": 10.7,
+      "text": "99% dust-free crystals",
+      "band": "upper",
+      "anim": "fadeup"
+    },
+    {
+      "start": 10.9,
+      "end": 13.4,
+      "text": "4x better odour control",
+      "band": "upper",
+      "anim": "fadeup"
+    },
+    {
+      "start": 13.6,
+      "end": 15.7,
+      "lines": [
+        "Less smell.",
+        "Less mess.",
+        "Less work."
+      ],
+      "stagger": 0.18,
+      "band": "upper",
+      "anim": "slideleft",
+      "exit": "cut"
+    },
+    {
+      "start": 16.1,
+      "end": 19.8,
+      "text": "Shop fitlitter.com.au",
+      "band": "upper",
+      "anim": "fadeup"
+    }
+  ],
+  "_timeline": {
+    "clipDurations": "FAK 3.20 + FKS 3.00 + GEG 4.90 + XWH 6.00 + XMT 4.15 = 21.25s of source",
+    "transitionSum": "0.25 + 0 + 0.5 + 0.5 = 1.25s",
+    "output": "21.25 - 1.25 = 20.00s",
+    "perSegmentOutputTimeline": {
+      "FAK": "0.00-3.20",
+      "FKS": "2.95-5.95",
+      "GEG": "5.95-10.85",
+      "XWH": "10.35-16.35",
+      "XMT": "15.85-20.00"
+    },
+    "_note": "Each segment starts early by its own transition. Time captions against the builder's printed timeline."
+  }
+}
