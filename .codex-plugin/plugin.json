@@ -1,6 +1,6 @@
 {
   "name": "recharm",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Turn creative briefs into shot lists and find matching footage in your Recharm library.",
   "author": {
     "name": "Recharm",
@@ -10,8 +10,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Recharm",
-    "shortDescription": "Find Recharm footage for creative briefs.",
-    "longDescription": "Turn a creative brief into a sectioned shot list, search Recharm\u2019s library for matching footage, review candidates visually, and produce a final brief with picks.",
+    "shortDescription": "Footage briefs and ad videos",
+    "longDescription": "Recharm turns a creative brief, script, or ad idea into a finished piece of ad creative using footage from your own Recharm clip library. It breaks the brief into scenes, searches your library for clips that fit each scene, reviews the candidates visually, and returns a shareable shot-by-shot brief with clip picks. It can also cut a finished ad video from those picks, with voiceover, music, and captions. Built for marketers, creative strategists, and video editors who produce paid-social and UGC ads. Requires a Recharm account with access to a clip library; it only works with footage in your own library.",
     "developerName": "Recharm",
     "category": "Productivity",
     "capabilities": [
@@ -19,6 +19,7 @@
       "Write"
     ],
     "websiteURL": "https://www.recharm.com",
+    "supportURL": "https://github.com/recharm/claude-plugin/issues",
     "privacyPolicyURL": "https://www.recharm.com/privacy-policy",
     "termsOfServiceURL": "https://www.recharm.com/terms-of-service",
     "defaultPrompt": [
