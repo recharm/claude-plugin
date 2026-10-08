@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build the ZIP we submit to the Codex plugin directory: the committed plugin
-# minus the skills Codex should not ship, with the Codex manifest adjusted to match.
+# minus the skills Codex should not ship. The Codex listing text lives in
+# .codex-plugin/plugin.json and must only describe the skills that remain.
 #
 #   ./scripts/build-codex-zip.sh        ->  dist/recharm-codex-<version>.zip
 #
@@ -26,16 +27,6 @@ for s in "${EXCLUDE_SKILLS[@]}"; do
   [ -d "$stage/skills/$s" ] || { echo "skills/$s not found - update EXCLUDE_SKILLS" >&2; exit 1; }
   rm -rf "$stage/skills/$s"
 done
-
-# The Codex listing must not advertise what the excluded skills do.
-m="$stage/.codex-plugin/plugin.json"
-jq '.interface.shortDescription = "Footage briefs and clip picks"
-    | .interface.longDescription |= sub(" It can also cut a finished ad video from those picks, with voiceover, music, and captions\\."; "")' \
-  "$m" > "$m.tmp" && mv "$m.tmp" "$m"
-if grep -qi "ad video" "$m"; then
-  echo "Codex manifest still mentions ad videos - the description changed; update this script" >&2
-  exit 1
-fi
 
 mkdir -p dist
 rm -f "$out"
