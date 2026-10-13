@@ -5,29 +5,16 @@ amateur; ordinary footage with a clean read and a bed underneath reads as profes
 
 ## First decide where the voice comes from
 
-It is the interview's voiceover question (Q5), and **the answer picks the footage**. Most Recharm
-libraries label this with `Actor Type` (`Actor A-roll` / `Actor B-roll` / `No Actor`) and `Audio Type`
-(`Voice` / `Voice With Background Sound` / `Background Sound`) - confirm the exact names and values in
-the brand's `actor-types.json` / `audio-types.json`. Use them as filters - they are the cheapest way to
-keep the wrong clips out of the plan. If the brand has no Actor Type category, sprite-check every pick
-for a moving mouth instead.
+It is the interview's voiceover question (Q5), and **the answer picks the footage** - the table in
+`SKILL.md` ("The voice decides the footage") says which `Actor Type` / `Audio Type` filters each voice
+source needs and whether clip audio is kept. Confirm the brand's exact label names in
+`actor-types.json` / `audio-types.json`; if it has no Actor Type category, sprite-check every pick for a
+moving mouth instead.
 
-- **Voiceover cut / VSL** (generated, or the user's upload) - search with
-  `{"Actor Type": ["Actor B-roll", "No Actor"]}` only: hands using the
-  product, product shots, lifestyle b-roll. **Mute every clip** (`keepClipAudio: false`), because even
-  B-roll carries `Background Sound` (room tone, handling noise, sometimes a TV) and some B-roll is
-  labelled `Voice With Background Sound` - a creator talking off-camera. Under a VO that is two voices.
-- **"The voice from the clips"** - creators' own A-roll dialogue carries the ad: filter
-  `{"Actor Type": ["Actor A-roll"], "Audio Type": ["Voice", "Voice With Background Sound"]}`,
-  `keepClipAudio: true`, cut on sentence boundaries. No generated VO on top.
-- **Mashup** - several creators' A-roll lines cut together (`Actor A-roll` only), **no additional
-  voiceover**, clip audio kept.
-- **Mixed** - A-roll carrying the story, B-roll / No Actor cutaways. This is where the split-edit
-  machinery earns its keep: with `keepClipAudio` on, the builder assembles clip audio on its own
-  sample-accurate timeline, so `audioLead` (J-cut) and `audioTail` (L-cut) let sound and picture cross
-  over on every change of material. See `motion-and-transitions.md`. With `keepClipAudio: true` the
-  cutaways' own sound comes along - pick cutaways labelled `Background Sound` (not `Voice...`), keep
-  them short, or pre-render them silent and bring them in as `file` segments.
+For a **mixed** ad (A-roll story, B-roll / No Actor cutaways) with `keepClipAudio: true`, the builder
+assembles clip audio on its own timeline so `audioLead` / `audioTail` can cross sound over picture
+(`captions-and-timing.md` -> Split edits). The cutaways' own sound comes along, so pick cutaways labelled
+`Background Sound` (not `Voice...`), keep them short, or pre-render them silent as `file` segments.
 
 ## Labels are the first line, not the last
 
@@ -62,6 +49,10 @@ sprite.
 
 ### Generated
 
+Write the music prompt as a brief, from the user's mood words: **genre, tempo (BPM), 2-4 instruments, the energy arc
+across the ad (e.g. "light pluck intro, lifts at 7s for the product, holds, clean button end"), instrumental, and the
+exact length**. A prompt that just repeats "upbeat and playful" gets a generic bed.
+
 **Use the ElevenLabs MCP** (connected as a claude.ai connector): `creative_list_voices` to choose,
 `creative_generate_speech` to generate. If it is not connected, tell the user to connect ElevenLabs
 in their claude.ai connector settings, and until then offer their own upload or the clips' voice.
@@ -92,6 +83,13 @@ this whole pipeline.
 
 If the generated read lands more than ~1.5s off your target, rewrite for length and regenerate
 rather than stretching or squeezing the audio - time-stretched speech sounds synthetic.
+
+### Brand pronunciation
+
+Text-to-speech misreads brand names (acronyms, numbers, invented words). Keep a `pronunciation` map in the
+brand's `brand.json` - `{ "AG1": "A G one", "magicspoon.com": "magic spoon dot com" }` - and apply it to the
+script text sent to ElevenLabs (the captions keep the real spelling). When a take misreads a name, add the
+entry and regenerate; every later ad for the brand gets it right.
 
 ### Supplied by the user
 
@@ -169,9 +167,27 @@ supplies a vocal track, say so and suggest an instrumental.
   changes between A-roll and cutaways. If a cutaway carries a *different* creator's speech, pick
   another cutaway rather than letting two voices overlap.
 
-**If you want a texture sound** (a pour, a rattle, a click, a pet noise) under a VO-led cut,
-generate it as a deliberate SFX layer (ElevenLabs `node_type: "sfx"`) or cut a short, pre-levelled
-sting from a clip's own audio into a separate file - never un-mute the clip itself. Un-muting is
+**Sound effects**, in this order: (1) the bundled CC0 set in `assets/sfx/` (licence: `assets/sfx/LICENSES.md`,
+CC0 1.0 - commercial use, no attribution); (2) ElevenLabs `node_type: "sfx"` for anything specific (a pour, a
+rattle, a pet noise); (3) a short, pre-levelled sting cut from a clip's own audio into a separate file. **Never
+un-mute a clip to get its sound.** Place them in the EDL on the output timeline:
+
+```json
+"audio": { "sfx": [ { "name": "whoosh-soft", "at": 4.55 }, { "name": "pop-1", "at": 8.6, "gainDb": -8 } ] }
+```
+
+`name` is a file in `assets/sfx/` without `.wav`; `file` takes any path. Default gain is -6 dB, which sits under
+a voice; raise it for an effect over silence. Use them sparingly: one per transition or text hit at most, none on
+testimonial jump cuts.
+
+| Job | Effects |
+|---|---|
+| Swipe / push transition | `whoosh-short`, `whoosh-soft`, `whoosh-medium-1s`, `slide-1`, `slide-2`, `sweep-long` |
+| Text or graphic appearing | `pop-1`, `pop-2`, `appear`, `tick-soft`, `click-soft` (`disappear` on exit) |
+| Landing a claim or a stat | `impact-soft-1`, `impact-soft-2`, `dry-thud`, `stamp-thud`, `stinger-hit-short` |
+| Building into the pivot or a reveal | `riser-short-2s`, `riser-medium-4s`, `reverse-cymbal-2s`, `swell-soft-3s`, `whoosh-reverse-1s` |
+| Out of a beat / winding down | `downlifter-2s`, `whoosh-long-2s` |
+| CTA, success, price | `success-chime`, `check-mark`, `bell-ding`, `cash-register-cha-ching`, `stinger-energetic-hit`, `send-whoosh-up` | Un-muting is
 all-or-nothing and brings any off-camera talk and room noise with it.
 
 ## Assembling the audio in the EDL

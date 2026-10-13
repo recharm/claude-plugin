@@ -37,25 +37,33 @@ Problem beat -> a Problems/Competitor category; Proof -> Experiment/Demo/Benefit
 
 ## 2. Searching
 
-1. **`list_labels(slug)` once per job**; use only values it returns (compare with the cache; trust the
-   live call).
-2. **Section the ad into ordered scenes** (~2-5s each, max 18): heading, 1-2 sentence description,
-   narrative role (hook / problem / agitation / pivot / solution / proof / CTA).
-3. **Per scene, 2-4 queries**: a literal visual phrase under ~8 words ("hand pouring powder into
-   glass", not "morning energy") plus 0-2 filter categories with 1-3 live values. Always `Product`
-   (when the brand has it) on product-showing searches, and the voice filter the format needs
-   (`SKILL.md` -> "The voice decides the footage").
-4. **Validate** the filter map with `check_filters.mjs` (write it to a file and pass `--file` on
-   PowerShell).
-5. **Search**: `search_clips_visually` once per query, first page only. Take the 1-3 lowest
-   `cosineDistance` hits, aim for 3-5 candidates per scene, dedupe by `clipSymbol`, **max one clip per
-   `rawVideoPublicId` per scene**, and across the ad avoid two clips from one shoot as separate beats
-   (a jump cut inside one take, or a before/after in one location, is fine). Record each pick's
-   `searchString` and `filters` - they go into the brief.
-6. **Empty or weak?** Drop one filter category, then the unfiltered query, then a synonym. Only then
-   call it a gap; say so plainly.
+The search method is Step 4 in `SKILL.md`. If a scene comes back empty or weak: drop one filter
+category, then try the unfiltered query, then a synonym. Only then call it a gap, and say so plainly.
 
 ## 3. Screening picks
+
+**Measure the shortlist first** (downloads each clip once; it is cached for the render):
+
+```bash
+node scripts/clip_tag.mjs <clip urls or files> --out tags.json
+```
+
+Per clip: real length and orientation, cuts inside the clip (never set an in/out across one), frozen and black
+stretches, brightness, motion energy (low / medium / high), audio and whether it is speech-level, the usable
+windows, and a 1-5 usability score. Use it to:
+
+- **choose in/out points** inside a usable window, not across an internal cut or a frozen stretch;
+- **match energy to the beat** - high-motion clips for hooks and problem beats, low/medium for the solution,
+  testimonial A-roll and the CTA;
+- **drop weak picks** - usability 1-2 needs a strong reason; between two equal picks, take the higher score.
+
+`clip_tag` cannot see burned-in text, offers, logos or which product is shown - so it ranks, the sprite decides.
+**Check the window you'll use, not just the clip**: a clip whose first half has someone talking can still be a clean
+B-roll pick after its internal cut, but say so in the plan and check its `Actor Type`/speech for that window.
+Then score what the numbers can't see, from the sprite, 1-5 each: **subject clarity** (is the product or person
+obvious at phone size), **framing** (subject inside the crop for this ratio), **on-brand** (right product and
+variant, no competitor), **cleanliness** (no burned-in text, offers, watermarks). A pick needs 4+ on all four, or
+its weakness named in the plan.
 
 Every clip that reaches the plan: `get_clip_sprite_image` (frames across the clip; the poster alone
 misses things). Check:
@@ -72,25 +80,19 @@ misses things). Check:
 - **finished ads**: some libraries are mostly finished, captioned ads with offers burned in. Those are
   not b-roll; treat them as unusable footage (see "Small or unusable libraries").
 
-Probe orientation and audio of every pick:
-`ffprobe -v error -show_entries stream=width,height,r_frame_rate:stream_side_data=rotation -of json <url>`.
+Probe the **real duration**, orientation and audio of every pick - the `durationMs` in search results can
+run a few frames longer than the file, so set every `out` point from the probe, not from search:
+`ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate:stream_side_data=rotation -of json <url>`.
 A portrait clip is often stored landscape with a +/-90 degree rotation flag; plain width/height lies.
 `build_ad.mjs` reads the rotation.
 
 ## 4. The talking-head reality
 
-Decide what the library can carry before you promise a format. From the brand's `actor-types.json`
-and `creators.json`:
-
-| Format | Needs |
-|---|---|
-| VO-led, VSL, promo, problem-solution, comparison, tutorial, day-in-the-life, motion graphics | Actor B-roll + No Actor footage, muted. Usually deep |
-| Mashup (A-roll only, no VO) | Several distinct creators with verified speech. Count them before promising |
-| Testimonial (one creator's own words) | One creator whose clips contain speech that carries hook -> story -> CTA. Verify (`Audio Type`, volumedetect, sprite for mouth). If not, offer a VO-read testimonial-style cut over their b-roll (and say it is narration) or ask for uploads |
-| Mixed A-roll + B-roll + No Actor | J/L-cuts; A-roll from verified speaking creators |
-
-Say how many live creators and how many speaking clips you found before the user commits to a
-creator-led format.
+Before promising a creator-led format (testimonial, mashup, mixed), count the live creators and the
+clips with **verified** speech - `Audio Type`, a loudness probe, and a sprite showing the mouth moving -
+from `actor-types.json` and `creators.json`, and tell the user the numbers. If a testimonial creator has
+no verified speech, offer a VO-read testimonial-style cut over their b-roll (and say it is narration) or
+ask for uploads. Which footage each voice source allows is the table in `SKILL.md`.
 
 **When the voice rule empties a beat.** If a beat's only clips are `Actor A-roll` + `Voice` (common for
 Problem/Hook beats) and the ad is voiceover-led, do not un-mute them. Options, in order: (1) a different
@@ -102,12 +104,15 @@ switch that beat to the creator's own voice and J/L-cut into the VO. Name the co
 budget per-label to classify them; sprite-check only the shortlist that reaches the plan.
 
 **Search cost.** `search_clips_visually` has no result limit and returns ~20-40 full hits per call
-(roughly 8-10k tokens). Use narrow filters, keep queries few and purposeful, and for catalog sweeps hand
-batches to subagents (one label group each) that write findings to the cache and return a summary.
+(roughly 8-10k tokens) - it is the biggest cost in the skill. Write **2 queries per scene**, use narrow
+filters you have already validated, and run the searches in subagents that return only a short pick
+list (see `SKILL.md` Step 4), so raw results never enter the main conversation.
 
 **Small or unusable libraries.** If the library has under ~30 clips, an unfiltered query returns almost all
-of it and the "lowest cosineDistance" rule stops meaning anything: enumerate once, sprite-check everything,
-and choose by eye. If what is there is finished ads with burned-in captions or offers, or nothing fits the
+of it and the "lowest cosineDistance" rule stops meaning anything: enumerate once, **sprite-check every clip - not a
+sample** (one clean clip among twenty finished ads is exactly what a sample misses), and choose by eye. `clip_tag`
+measures cuts, motion and speech; it cannot see burned-in text, offers or which product is on screen, so it narrows
+the list but never replaces the sprite. If what is there is finished ads with burned-in captions or offers, or nothing fits the
 brief, say so and offer the no-footage route: a motion-graphics ad built from the website's logo,
 packshots and palette (`motion-graphics.md`), instead of forcing weak clips into the plan.
 

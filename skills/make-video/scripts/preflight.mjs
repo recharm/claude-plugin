@@ -143,9 +143,19 @@ if (DEEP) {
     console.log(`                 sfx kit: ${sfx} files${sfx < 30 ? ' - run its scripts/library_restore.py' : ''}; full check: bash ${ge.split(path.sep).join('/')}/scripts/doctor.sh`);
   }
   if (!ok) {
-    console.log('                 to install (user runs/approves): git clone https://github.com/kurbaitaev/ghost-editor');
-    console.log('                 ~/.claude/skills/ghost-editor, then follow its docs/INSTALL.md');
+    console.log('                 optional - not needed; ElevenLabs transcription covers testimonials');
   }
+}
+
+// Companion skills and optional tools.
+{
+  const sk = path.join(os.homedir(), '.claude', 'skills');
+  const have = ['remotion-best-practices', 'remotion-markup', 'remotion-render'].filter((n) => fs.existsSync(path.join(sk, n, 'SKILL.md')));
+  console.log('');
+  console.log(`  ${have.length === 3 ? 'ok      ' : 'absent  '} remotion skills  ${have.length}/3 installed${have.length === 3 ? '' : ' - needed before writing Remotion code; see references/setup.md'}`);
+  const py = process.platform === 'win32' ? 'py' : 'python3';
+  const w = spawnSync(py, ['-c', 'import whisper'], { encoding: 'utf8' });
+  console.log(`  ${!w.error && w.status === 0 ? 'ok      ' : 'absent  '} whisper          ${!w.error && w.status === 0 ? 'local transcription available (scripts/transcribe.mjs)' : 'optional - else use ElevenLabs transcription'}`);
 }
 
 // These live in the session, not on disk, so a script cannot probe them.

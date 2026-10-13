@@ -6,8 +6,14 @@ they provide wins. Otherwise harvest from the brand's website and say so in the 
 
 ## Harvesting the website
 
-`brand.json -> website` (from `get_brand_info`, confirmed by the user). Use the in-app browser
-(`mcp__Claude_Browser__*`; Claude in Chrome only if the user asks for it) for anything that needs exact
+**Start with the script:** `node scripts/harvest_site.mjs <site> --brand <slug> --images 8 --write`. On a Shopify
+store it reads `/products.json` (every product, price, variant, stock and image in one request) and saves packshots;
+on any site it lists CSS colour variables, the most-used colours, font families (flagging Google Fonts) and logo
+candidates. It's evidence, not the final word - use the browser for what it can't do: verbatim claims, a logo drawn
+as an inline SVG, and deciding which colour is primary.
+
+`brand.json -> website` (from `get_brand_info`, confirmed by the user). Use the in-app browser in **your own tab** (`tabs_create`, then `navigate` - other sessions may share the pane;
+`preview_start` with the URL also works; Claude in Chrome only if the user asks for it) for anything that needs exact
 wording, prices, colours or fonts: `WebFetch` only returns a model summary, so it cannot give hex values,
 font names or verbatim claims (use it to locate pages), and it can be rate-limited (HTTP 429) - fall back
 to the browser. If `https://www.<domain>` fails (DNS, 429), try the bare domain, and vice versa; if both
@@ -27,14 +33,32 @@ usually 404. Read in this order and stop when covered:
    from CSS custom properties (`--color-*`).
 5. **Offers** - banner/promo text. Record each with its page and the date: offers expire.
 
-Record in `brand.json`: `palette` (named hex values with role: primary, secondary, accent, ground,
-text), `fonts` (heading, body, source, licence status), `logo` (paths to saved files, light and dark
+Record in `brand.json` - in exactly this shape, because `mg_init.mjs` and `critic_pack.mjs` read it:
+
+```json
+"palette": {"primary": {"hex": "#3F0791", "role": "buttons, headings"}, "secondary": {"hex": "..."}, "accent": {"hex": "..."},
+            "ground": {"hex": "#FFFFFF"}, "text": {"hex": "..."}, "footer": {"hex": "#000000"}},
+"fonts": {"heading": "Poppins", "body": "Poppins", "licence": "OFL"},
+"logo": {"files": ["images/website/logo.svg"], "cssFill": "#3F0791", "note": "..."}
+```
+
+(keys `primary`/`secondary`/`accent`/`ground`/`text`/`footer`; a plain hex string also works; font names as plain
+strings; logo files in `images/website/` named `logo*`). Then also: `palette` roles chosen from the evidence, `fonts` (heading, body, source, licence status), `logo` (paths to saved files, light and dark
 variants), `tone` (3 adjectives from the copy), `market` (country/accent, currency), `motif` (a
-repeating shape from the logo or packaging). Record in `website-brand.json`: `claims[]` each with
+repeating shape from the logo or packaging), `pronunciation` (how the brand, products and URL should be spoken
+by a generated voice - add to it whenever a take misreads one). Record in `website-brand.json`: `claims[]` each with
 `text`, `url`, `source note`; `offers[]`; `reviews`; `disclaimers[]`.
 
 Save images (logos, packshots, lifestyle; 6-12 total) with `catalog_tool.mjs images`. Only what the
 brand itself published; never save images from third-party sites.
+
+**Save the logo exactly as published.** If the site only has it as an inline SVG, save that SVG
+byte-for-byte - `harvest_site.mjs --write` does this when it can find it (`images/website/logo-inline.svg`). Many sites
+colour an inline logo with CSS, so the saved file has no fill of its own and shows black elsewhere: record the site's
+CSS colour as `logo.cssFill` in `brand.json` - `mg_init` displays the logo in exactly that colour, the way the site
+does. That reproduces the published logo; any other colour is a recolour. Never recolour, redraw, crop or "fix" it, and never save a modified copy next to the
+original - a recoloured logo in the cache will end up in an ad. If the published colour won't read on
+a background, change the background, not the logo.
 
 ## Fonts
 

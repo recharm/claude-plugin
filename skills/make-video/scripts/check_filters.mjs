@@ -142,5 +142,7 @@ for (const [key, vals] of Object.entries(filters)) {
 
 for (const w of warnings) console.log(`  warn   ${w}`);
 for (const e of errors) console.log(`  ERROR  ${e}`);
-if (!errors.length && !warnings.length) console.log('  ok     filters are valid and retrievable');
+const swept = Object.keys(DEAD).length > 0 || LABELS.swept === true;
+if (!errors.length && !warnings.length) console.log(swept ? '  ok     filters are valid and retrievable'
+  : '  ok     filters are valid labels - but no liveness check has been recorded yet, so dead labels can\'t be flagged (run the Tier 2 check first)');
 process.exit(errors.length ? 1 : 0);

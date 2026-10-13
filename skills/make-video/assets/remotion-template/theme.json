@@ -1,0 +1,25 @@
+{
+  "_about": "Placeholder theme. mg_init.mjs overwrites this from the brand cache's brand.json - never hand-edit brand colours here.",
+  "aspect": "9:16",
+  "url": "brand.com",
+  "logo": "",
+  "endCardText": "onPrimary",
+  "color": {
+    "primary": "#5B00ED",
+    "secondary": "#3F0791",
+    "accent": "#B2F9E9",
+    "ground": "#FFFFFF",
+    "text": "#1A1A1A",
+    "onPrimary": "#FFFFFF",
+    "muted": "#C9C9D6",
+    "dark": "#111111"
+  },
+  "font": {
+    "heading": "Poppins",
+    "body": "Poppins",
+    "files": [
+      {"family": "Poppins", "file": "Poppins-Regular.ttf", "weight": 400},
+      {"family": "Poppins", "file": "Poppins-Bold.ttf", "weight": 700}
+    ]
+  }
+}

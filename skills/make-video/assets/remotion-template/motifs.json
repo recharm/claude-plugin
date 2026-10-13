@@ -1,0 +1,14 @@
+{
+  "_about": "PLACEHOLDER. mg_init.mjs replaces this with the brand cache's motifs.json (written by brand_motifs.mjs from the brand's website and Recharm library). Do not hand-edit in the project - edit <cache>/brands/<slug>/motifs.json.",
+  "brand": "",
+  "category": "general",
+  "style": "bold",
+  "confirmed": false,
+  "props": [{"shape": "dot", "why": "placeholder"}],
+  "problemObjects": [],
+  "productColors": [],
+  "packshots": [],
+  "icons": {},
+  "claimVisuals": [],
+  "actions": []
+}

@@ -17,8 +17,7 @@ it. Everything lives in `~/.claude/make-video/brands/<slug>/` (override the root
     asset-types.json    Asset Type / Captions                                  (if present)
     filters.json        every other label category: role + dead/thin values + tags
     website-brand.json  claims with source URLs, offers, reviews, disclaimers, tone
-    clips.json, raw-videos.json   sampled clips grouped by source shoot, with probe data
-    images/{products,creators,scenes,website}/   saved images
+    images/{products,creators,website}/   saved images
   fonts/                brand font files, when licensable
 ```
 
@@ -33,15 +32,21 @@ Reuse a cache that is under 30 days old **and** whose `labels.json` still matche
 preserves enriched entries and reports which labels are new or gone. Tell the user "I already know
 this brand (built <date>)" or "building the brand library now (~N minutes)".
 
-## 0b. Build tiers (so a budget-limited run still ends usable)
+## 0b. Build lazily, in tiers
 
-- **Tier 1 - required before the interview**: `brand.json` (from `get_brand_info`), `labels.json` +
-  skeleton catalogs, `website-brand.json` (claims with source URLs, offers, disclaimers) and
-  `products.json` mapped to labels, with the product the user named verified live in a search.
-- **Tier 2 - required before the plan**: dead/thin results for every label you intend to filter on, the
-  creators you will offer (live, speaking verified), Actor/Audio coverage counts, 6-12 packshots/logos.
-- **Tier 3 - nice to have**: the full creator sweep, `clips.json`/`raw-videos.json` for every label,
-  posters per scene type. Build in the background with subagents; never block the interview on it.
+Build only what the current ad needs, and cache it; later ads fill in the rest.
+
+- **Tier 1 - before the interview**: `brand.json` (from `get_brand_info`), `labels.json` + skeleton
+  catalogs, `website-brand.json` (claims with source URLs, offers, disclaimers), and `products.json`
+  mapped to labels, with the product the user named verified live in one search.
+- **Tier 2 - before the plan, only for this ad**: dead/thin checks for the labels this ad will filter on,
+  the creators you will offer (live, speaking verified), Actor/Audio coverage counts, 6-12 packshots and
+  logos, then `brand_motifs.mjs --brand <slug> --write` (the brand's animation motifs from the website,
+  packshots and labels - `animation-library.md` §1; confirm it when you look at the first sprites). Run it in
+  the background while the interview happens.
+- **Not built**: a full clip or raw-video index, and posters per scene type. Every search hit already
+  carries `rawVideoPublicId`, which is all de-duplication needs, and no step reads a clip index.
+
 `status` shows what is missing; tell the user which tiers are done. Write the website data to the cache
 (`brand.json`, `website-brand.json`, `images/website/`) as soon as you have it - it is easy to forget.
 
@@ -58,7 +63,8 @@ Assemble it from:
 | What a clip looks like | `get_clip_poster_image`, `get_clip_sprite_image` |
 
 Save each tool result to a JSON file in the scratch folder (the MCP call cannot write files; you write
-the file yourself). For categories with hundreds of values (creators) write the first ~60 plus
+the file yourself). Admin categories (`Batch`, `Usage Rights`, `Recharm`) are skipped by every script, so write them with one or two
+values. For categories with hundreds of values (creators) write the first ~60 plus
 `"partial": true` and the real `"count"`: `check_filters.mjs` then warns, not errors, on a value it has
 not seen, and the sweep fills in the creators you actually use. Then ingest:
 
@@ -78,19 +84,19 @@ no Creator (etc.) category, that catalog does not exist - say so, do not invent 
 ## 2. Sweep the library (search is the only way in)
 
 For libraries under ~30 clips skip the per-label sweep: one unfiltered search returns nearly everything;
-record it and sprite-check. Otherwise, for each Scene Type, Product, Creator, Actor Type and Audio Type
-label you intend to use, run **one filtered search** with a generic query ("person", "product", "hands") and `filters: {<category>: [<label>]}`.
-This does three jobs at once:
+record it and sprite-check. Otherwise, for each label **this ad** will filter on, run **one filtered
+search** with a generic query ("person", "product", "hands") and `filters: {<category>: [<label>]}`.
+Run sweeps in subagents (one label group each) that write results to the cache and return only a
+summary - each search costs ~10-17k tokens (a 22-label sweep measured 376k), so sweep **only the labels this ad
+will filter on**, and finish it **before** Step 4 searches. A full first page is 32 hits, so a count tells you dead
+(0) or thin (1-9), not how big a live label is. A sweep does two jobs at once:
 
 - **Liveness**: zero hits on a label that `list_labels` returned = **dead** label. Record it:
   `node scripts/catalog_tool.mjs dead <slug> "<Category>" "<Value>"`. 1-9 hits = **thin**.
   (`list_labels` returns values assigned to at least one clip, yet many retrieve nothing in search -
   the index and the label table disagree. Never assume a listed label returns clips.)
-- **Sampling**: collect hit `clipSymbol`s, `rawVideoPublicId`s, `durationMs`, `categoriesAndLabels`
-  into `clips.json` and group by `rawVideoPublicId` into `raw-videos.json` (one shoot = one source
-  video; dedupe later by it).
-- **Posters**: take the lowest-`cosineDistance` hit per label and fetch `get_clip_poster_image` for
-  creators, products and scene types. Save to `images/` (use `catalog_tool.mjs images`).
+- **Posters**: take the lowest-`cosineDistance` hit per creator and product label and fetch
+  `get_clip_poster_image`. Save to `images/` (use `catalog_tool.mjs images`).
 
 Budget: parallel batches of ~10 searches. Stop at diminishing returns - a catalog of 150 well-labelled
 clips beats an exhaustive crawl. Unlabelled clips exist; an unfiltered query finds them.
@@ -128,7 +134,7 @@ and thin values, top clips. Cross-reference Scene Type and tags so each ad beat 
 demo, proof) maps to the *live* label that finds it - names like `Hook` and `CTA` are often dead in
 practice. `check_filters.mjs` enforces this at search time.
 
-**Scene types** (`scene-types.json`): live/dead, narrative role, formats that use it, a sample poster.
+**Scene types** (`scene-types.json`): live/dead, narrative role, formats that use it.
 
 **Website brand** (`website-brand.json`, `brand.json`): see `brand-assets.md`.
 
