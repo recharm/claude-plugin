@@ -1,0 +1,30 @@
+{
+  "_about": "The template's built-in example (both compositions). Your own ads/<name>.json is {\"scenes\": [...]} for Ad, or {\"duration\", \"items\"} for Overlay - not nested under \"ad\"/\"overlay\". Placeholders only. Every scene needs a visual besides text (references/animation-library.md); shapes, colours and icons default to the brand's motifs.json. Every claim and number must come from website-brand.json or the user.",
+  "ad": {
+    "scenes": [
+      {"type": "scene", "duration": 3.2, "bg": "dark", "text": "<Hook: the problem, 3-6 words>", "preset": "fade",
+       "visuals": [{"kind": "pour", "problem": true, "source": "box", "sourceLabel": "<the usual thing>", "container": "bowl"}]},
+      {"type": "scene", "duration": 3.0, "bg": "dark",
+       "visuals": [{"kind": "chart", "title": "<WHAT DROPS>", "meter": true, "points": [0.45, 0.95, 0.1, 0.05], "labels": ["<t1>", "<t2>", "<t3>", "<t4>"],
+                    "times": [0, 0.5, 1.4, 2.4], "callouts": [{"i": 1, "text": "<SPIKE>"}, {"i": 2, "text": "<CRASH>", "tone": "bad", "big": true}]}],
+       "transition": {"type": "whip", "direction": "from-bottom", "seconds": 0.27}},
+      {"type": "scene", "duration": 2.6, "bg": "primary",
+       "visuals": [{"kind": "shatter", "at": 0}, {"kind": "counter", "value": "<0g>", "label": "<WHAT>", "at": 0.3}],
+       "transition": {"type": "zoom", "seconds": 0.4}},
+      {"type": "scene", "duration": 3.2, "bg": "primary",
+       "visuals": [{"kind": "badges", "items": [{"text": "<Claim one>"}, {"text": "<Claim two>"}, {"text": "<Claim three>"}], "at": 0.3, "stagger": 0.8},
+                   {"kind": "particles", "mode": "drift"}],
+       "transition": {"type": "slide", "direction": "from-right", "seconds": 0.45, "timing": "spring"}},
+      {"type": "endcard", "duration": 2.5, "bg": "secondary", "url": "<brand.com>", "cta": "<Shop now>",
+       "visuals": [{"kind": "particles", "mode": "fall"}],
+       "transition": {"type": "fade", "seconds": 0.4}}
+    ]
+  },
+  "overlay": {
+    "duration": 6,
+    "items": [
+      {"type": "lowerThird", "start": 0.5, "duration": 2.5, "y": 0.78, "text": "<Name>", "sub": "<context>", "icon": "star"},
+      {"type": "visual", "start": 3.2, "duration": 2.4, "y": 0.62, "visual": {"kind": "gauge", "value": "<12g>", "label": "<from the site>"}}
+    ]
+  }
+}

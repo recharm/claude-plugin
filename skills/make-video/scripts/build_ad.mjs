@@ -442,7 +442,12 @@ function buildAss(captions, style, W, H) {
   // benefits, where arriving all together would make them a paragraph rather
   // than a list. Each line gets its own entrance; they all leave together.
   const events = (captions || []).flatMap((c) => {
-    const frac = CAPTION_BANDS[c.band] ?? CAPTION_BANDS.middle;
+    // `y` (0 = top, 1 = bottom) places a caption exactly - pick it from the
+    // sprite so the text clears the face and the product. Kept inside the
+    // platform-safe zone (top 8% / bottom 12% are covered by app UI).
+    const frac = Number.isFinite(c.y)
+      ? Math.min(0.88, Math.max(0.08, c.y))
+      : (CAPTION_BANDS[c.band] ?? CAPTION_BANDS.middle);
     const x = Math.round(W / 2);
     const animName = c.anim && CAPTION_ANIMS[c.anim] ? c.anim : 'fadeup';
     const colour = c.color ? `\\c${assColour(c.color)}` : '';
@@ -581,10 +586,11 @@ function buildClipAudioTimeline({ segMeta, timeline, trans, total, workDir, fade
 
 function buildAudioFilter(cfg, total) {
   const { vo, music, duck, duckDb, voGainDb, musicGainDb, voDelay, fadeOut, loudnorm, lufs, clipAudioLabel } = cfg;
+  const sfx = cfg.sfx || [];
   const parts = [];
   const AF = 'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
 
-  if (!vo && !music && !clipAudioLabel) return null;
+  if (!vo && !music && !clipAudioLabel && !sfx.length) return null;
 
   if (vo) {
     const d = Math.max(0, Math.round(voDelay * 1000));
@@ -610,6 +616,15 @@ function buildAudioFilter(cfg, total) {
   } else if (music) {
     stack.push('[bed]');
   }
+
+  // Sound effects sit on the output timeline at `at` seconds, under the voice.
+  // They join the mix before loudness normalisation, so their gain is relative
+  // to the voice, not an absolute level.
+  sfx.forEach((fx, k) => {
+    const d = Math.max(0, Math.round(fx.at * 1000));
+    parts.push(`[${fx.idx}:a]${AF},volume=${fx.gainDb}dB,adelay=${d}|${d},apad,atrim=0:${total}[sfx${k}]`);
+    stack.push(`[sfx${k}]`);
+  });
 
   if (stack.length === 1) {
     parts.push(`${stack[0]}anull[premix]`);
@@ -638,13 +653,22 @@ async function main() {
     die(`EDL is not valid JSON: ${e.message}`);
   }
 
-  const { W, H, aspect } = resolveFrame(edl);
+  // --draft (or "draft": true): half-size frame and a fast encode, for approval
+  // renders and the critic. Same timeline, captions and mix as the final, so the
+  // cut that gets approved is the cut that ships - the final is just sharper.
+  const DRAFT = process.argv.includes('--draft') || edl.draft === true;
+  const full = resolveFrame(edl);
+  const W = DRAFT ? even(full.W / 2) : full.W;
+  const H = DRAFT ? even(full.H / 2) : full.H;
+  const aspect = full.aspect;
+  const ENC = DRAFT ? ['-preset', 'ultrafast', '-crf', '28'] : null;
   const FPS = edl.fps ?? DEFAULTS.fps;
-  info(`output ${W}x${H}${aspect ? ` (${aspect})` : ''} @ ${FPS}fps`);
+  info(`output ${W}x${H}${aspect ? ` (${aspect})` : ''} @ ${FPS}fps${DRAFT ? '  DRAFT - half size, fast encode' : ''}`);
   const base = path.dirname(path.resolve(edlPath));
   const cacheDir = path.resolve(base, edl.cacheDir ?? DEFAULTS.cacheDir);
   const workDir = path.resolve(base, edl.workDir ?? DEFAULTS.workDir);
-  const output = path.resolve(base, edl.output ?? 'out/ad.mp4');
+  let output = path.resolve(base, edl.output ?? 'out/ad.mp4');
+  if (DRAFT) output = output.replace(/(\.[^./\\]+)?$/, (ext) => `-draft${ext || '.mp4'}`);
 
   if (!Array.isArray(edl.segments) || edl.segments.length === 0) die('EDL has no segments');
 
@@ -724,6 +748,14 @@ async function main() {
   // over a wider window than its video trim - a split edit needs audio the
   // picture never shows, which the normalized seg files no longer contain.
   const segMeta = [];
+  // Normalised segments are cached under cacheDir/segments, keyed by everything
+  // that shapes them (source file, trim, frame, filters, codec, audio). A
+  // re-render after feedback, or a hook variant that reuses the body, then only
+  // re-encodes the segments that actually changed.
+  const segCacheDir = path.join(cacheDir, 'segments');
+  const useSegCache = edl.segmentCache !== false;
+  if (useSegCache) fs.mkdirSync(segCacheDir, { recursive: true });
+  let reusedSegs = 0;
 
   for (let i = 0; i < edl.segments.length; i++) {
     const seg = edl.segments[i];
@@ -793,7 +825,7 @@ async function main() {
       '-i', src,
       '-t', dur.toFixed(3),
       '-vf', [...scaleCrop, `fps=${FPS}`, ...(mf ? [mf] : []), 'setsar=1', 'format=yuv420p'].join(','),
-      '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+      '-c:v', 'libx264', ...(ENC ?? ['-preset', 'veryfast', '-crf', '18']),
       '-video_track_timescale', String(FPS * 1000),
     ];
     if (keepClipAudio && hasAudioStream(src)) {
@@ -801,10 +833,23 @@ async function main() {
     } else {
       args.push('-an');
     }
+    const st = fs.statSync(src);
+    const segKey = crypto.createHash('sha1')
+      .update(JSON.stringify([path.resolve(src), st.size, Math.round(st.mtimeMs), args]))
+      .digest('hex').slice(0, 20);
+    const cachedSeg = path.join(segCacheDir, `${segKey}.mp4`);
     args.push(out);
 
-    run('ffmpeg', args);
-    info(`${String(i + 1).padStart(2)}. ${label.padEnd(30)} ${tIn.toFixed(2)} -> ${tOut.toFixed(2)}  (${dur.toFixed(2)}s)${mf ? `  move:${moveName}` : ''}`);
+    let fromCache = false;
+    if (useSegCache && fs.existsSync(cachedSeg)) {
+      fs.copyFileSync(cachedSeg, out);
+      fromCache = true;
+      reusedSegs++;
+    } else {
+      run('ffmpeg', args);
+      if (useSegCache) fs.copyFileSync(out, cachedSeg);
+    }
+    info(`${String(i + 1).padStart(2)}. ${label.padEnd(30)} ${tIn.toFixed(2)} -> ${tOut.toFixed(2)}  (${dur.toFixed(2)}s)${mf ? `  move:${moveName}` : ''}${fromCache ? '  (cached)' : ''}`);
     segFiles.push(out);
     durations.push(dur);
 
@@ -831,6 +876,7 @@ async function main() {
     }
     segMeta.push({ src, tIn, tOut, dur, lead, tail, label, hasAudio: hasAudioStream(src) });
   }
+  if (reusedSegs) info(`   ${reusedSegs}/${edl.segments.length} segments reused from cache`);
 
   // ---- 3. join ---------------------------------------------------------
   // Transition on segment i describes how segment i ENTERS (i.e. the join
@@ -953,7 +999,7 @@ async function main() {
     args.push('-filter_complex', chains.join(';'), '-map', '[vjoin]');
     if (keepClipAudio) args.push('-map', '[ajoin]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000');
     else args.push('-an');
-    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', String(FPS), 'joined.mp4');
+    args.push('-c:v', 'libx264', ...(ENC ?? ['-preset', 'veryfast', '-crf', '18']), '-pix_fmt', 'yuv420p', '-r', String(FPS), 'joined.mp4');
 
     run('ffmpeg', args, { cwd: workDir });
   }
@@ -1010,6 +1056,33 @@ async function main() {
   }
   const voGainDb = voSpec?.gainDb ?? 0;
 
+  // Sound effects: { name | file, at, gainDb }. `name` picks a bundled CC0
+  // effect from assets/sfx (see assets/sfx/LICENSES.md); `file` is a path.
+  const sfxSpecs = [];
+  for (const fx of audioCfg.sfx || []) {
+    const at = Number(fx.at);
+    if (!(at >= 0) || at >= total) { warn(`sfx "${fx.name || fx.file}" at ${fx.at}s is outside the ${total.toFixed(2)}s cut - skipped`); continue; }
+    const p = fx.file ? path.resolve(base, fx.file)
+      : path.resolve(HERE, '..', 'assets', 'sfx', `${String(fx.name).replace(/\.wav$/i, '')}.wav`);
+    if (!fs.existsSync(p)) die(`sfx not found: ${fx.name || fx.file} (looked for ${p})`);
+    inputs.push('-i', p);
+    sfxSpecs.push({ idx: idx++, at, gainDb: Number.isFinite(fx.gainDb) ? fx.gainDb : -6 });
+  }
+  if (sfxSpecs.length) info(`${sfxSpecs.length} sound effect${sfxSpecs.length === 1 ? '' : 's'} placed`);
+
+  // Overlays: transparent graphics rendered by the Remotion template's Overlay composition
+  // (ProRes 4444 with alpha), laid on the footage at `at` seconds of the OUTPUT timeline, under the captions.
+  const overlaySpecs = [];
+  for (const ov of edl.overlays || []) {
+    const p = path.resolve(base, ov.file || '');
+    if (!ov.file || !fs.existsSync(p)) die(`overlay file not found: ${ov.file}`);
+    const at = Math.max(0, Number(ov.at ?? 0));
+    if (at >= total) { warn(`overlay ${ov.file} starts at ${at}s, after the ${total.toFixed(2)}s cut - skipped`); continue; }
+    inputs.push('-i', p);
+    overlaySpecs.push({idx: idx++, at});
+  }
+  if (overlaySpecs.length) info(`${overlaySpecs.length} graphic overlay${overlaySpecs.length === 1 ? '' : 's'} placed`);
+
   /*
    * Place the bed a fixed number of dB under the speech - default 4.
    *
@@ -1062,21 +1135,30 @@ async function main() {
     loudnorm: audioCfg.loudnorm !== false,
     lufs: audioCfg.targetLufs ?? -14,
     clipAudioLabel,
+    sfx: sfxSpecs,
   }, total);
 
   const chains = [];
-  if (assFile) chains.push(`[0:v]subtitles=captions.ass:fontsdir=fonts[vout]`);
+  let vLabel = '[0:v]';
+  overlaySpecs.forEach((ov, k) => {
+    const next = `[ov${k}v]`;
+    chains.push(`[${ov.idx}:v]scale=${W}:${H},format=yuva420p,setpts=PTS-STARTPTS+${ov.at.toFixed(3)}/TB[ov${k}]`);
+    chains.push(`${vLabel}[ov${k}]overlay=0:0:eof_action=pass:format=auto${next}`);
+    vLabel = next;
+  });
+  if (assFile) chains.push(`${vLabel}subtitles=captions.ass:fontsdir=fonts[vout]`);
+  else if (overlaySpecs.length) chains.push(`${vLabel}null[vout]`);
   if (audioFilter) chains.push(audioFilter);
 
   const args = ['-hide_banner', '-loglevel', 'error', '-y', ...inputs];
   if (chains.length) args.push('-filter_complex', chains.join(';'));
-  args.push('-map', assFile ? '[vout]' : '0:v');
+  args.push('-map', assFile || overlaySpecs.length ? '[vout]' : '0:v');
 
   if (audioFilter) args.push('-map', '[aout]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000');
   else { args.push('-an'); warn('rendering with no audio track'); }
 
   args.push(
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
+    '-c:v', 'libx264', ...(ENC ?? ['-preset', 'medium', '-crf', '20']),
     '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-level', '4.2',
     '-r', String(FPS), '-t', total.toFixed(3),
     '-movflags', '+faststart', output,

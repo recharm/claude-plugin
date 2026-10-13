@@ -1,7 +1,7 @@
 # Ad formats: routes, timings, aspect handling
 
-Writing patterns are in `script-structures.md`; the editing grammar is in `motion-and-transitions.md`;
-library facts in `library.md`. What a given brand's library can actually carry comes from its cache
+Writing patterns are in `script-structures.md`; editing grammar in `editing-testimonial.md`,
+`editing-promo.md` and `captions-and-timing.md`; library facts in `library.md`. What a given brand's library can actually carry comes from its cache
 (`actor-types.json`, `creators.json`, `scene-types.json`): check coverage before promising a format.
 
 ## Format -> route -> footage
@@ -80,8 +80,9 @@ Rightward swipes; slide-in-sequence step labels.
 cutaways where they mention the product (L-cut off them, J-cut back) -> their CTA or an end card. Jump
 cuts only between their takes.
 
-**Motion graphics**: hook text snaps in <300ms; one idea per scene, 2.5-4s; every scene has a
-non-product graphic; transitions per beat; end card with logo and URL. See `motion-graphics.md`.
+**Motion graphics**: hook text snaps in <300ms; one idea per scene, 2.5-4s; every scene draws a visual
+from the animation library made of the brand's motifs - never text alone; transitions per beat; end card with
+logo and URL. See `motion-graphics.md` and `animation-library.md`.
 
 **Mixed footage + graphics**: right for explainers, comparisons with numbers, anything footage cannot
 show. Render Remotion segments silent and pass them to `build_ad.mjs` as `file` segments so VO and music

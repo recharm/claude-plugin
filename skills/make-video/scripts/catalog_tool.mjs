@@ -29,7 +29,7 @@ const ROOT = process.env.MAKE_VIDEO_ROOT || path.join(os.homedir(), '.claude', '
 const FRESH_DAYS = 30;
 const [cmd, slug, ...rest] = process.argv.slice(2);
 
-const SUBDIRS = ['catalog', 'catalog/images/products', 'catalog/images/creators', 'catalog/images/scenes',
+const SUBDIRS = ['catalog', 'catalog/images/products', 'catalog/images/creators',
   'catalog/images/website', 'fonts', 'work'];
 
 // Label categories vary per brand. Detect the ones the skill builds catalogs for by name, so a brand
@@ -51,7 +51,8 @@ function dirFor(s) { return path.join(ROOT, 'brands', s); }
 function die(msg) { console.error(`  ${msg}`); process.exit(1); }
 function readJson(p) { return JSON.parse(fs.readFileSync(p, 'utf8').replace(/^﻿/, '')); }
 function writeJson(p, o) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, JSON.stringify(o, null, 2)); }
-const today = () => new Date().toISOString().slice(0, 10);
+// Local date (not UTC), so a cache built late in the evening isn't stamped with tomorrow's or yesterday's date.
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 if (!cmd || !slug) die('usage: node catalog_tool.mjs <init|status|labels|info|dead|set|images|path> <slug> [args]  (see header)');
 const B = dirFor(slug);
@@ -77,12 +78,12 @@ if (cmd === 'init') {
   const age = labels?._snapshot ? Math.floor((Date.now() - Date.parse(labels._snapshot)) / 864e5) : null;
   console.log(`\n  ${slug}  ${B}`);
   console.log(`  labels snapshot: ${labels ? `${labels._snapshot} (${age} days old${age > FRESH_DAYS ? ' - STALE, rebuild' : ''}), ${labels.labelCategories.length} categories` : 'MISSING'}`);
-  for (const f of ['products', 'creators', 'actor-types', 'audio-types', 'scene-types', 'asset-types', 'filters', 'website-brand', 'clips', 'raw-videos'])
+  for (const f of ['products', 'creators', 'actor-types', 'audio-types', 'scene-types', 'asset-types', 'filters', 'website-brand'])
     console.log(`  ${f.padEnd(14)} ${have(`${f}.json`) ? 'ok' : (labels && f in KINDS && !labels.detected?.[f] ? 'n/a (brand has no such label category)' : 'missing')}`);
   const brand = fs.existsSync(path.join(B, 'brand.json')) ? readJson(path.join(B, 'brand.json')) : {};
   console.log(`  brand.json     ${brand.website ? `website ${brand.website}` : 'no website recorded'}${brand.palette ? ', palette ok' : ', palette missing'}${brand.fonts ? ', fonts ok' : ', fonts missing'}`);
   const count = (d) => (fs.existsSync(path.join(CAT, 'images', d)) ? fs.readdirSync(path.join(CAT, 'images', d)).length : 0);
-  console.log(`  images         products ${count('products')}, creators ${count('creators')}, scenes ${count('scenes')}, website ${count('website')}\n`);
+  console.log(`  images         products ${count('products')}, creators ${count('creators')}, website ${count('website')}\n`);
 } else if (cmd === 'labels') {
   const file = rest[0]; if (!file) die('labels needs the saved list_labels JSON path');
   for (const d of SUBDIRS) fs.mkdirSync(path.join(B, d), { recursive: true });
@@ -145,8 +146,9 @@ if (cmd === 'init') {
   const cur = fs.existsSync(p) ? readJson(p) : { slug };
   const info = readJson(file);
   const website = info.website || info.url || info.websiteUrl;
-  writeJson(p, { ...cur, ...info, slug, website: website || cur.website, infoFetchedAt: today() });
-  console.log(`  brand.json updated (${info.prettyName || info.displayName || info.name || slug}${website ? `, ${website}` : ', NO website in get_brand_info - ask the user'})`);
+  const site = website || cur.website;
+  writeJson(p, { ...cur, ...info, slug, website: site, infoFetchedAt: today() });
+  console.log(`  brand.json updated (${info.prettyName || info.displayName || info.name || cur.prettyName || slug}${site ? `, ${site}` : ', NO website recorded - propose one and ask the user'})`);
 } else if (cmd === 'dead') {
   const [category, ...vals] = rest;
   if (!category || !vals.length) die('usage: dead <slug> "<Category>" "<Value>" [...]');
@@ -171,8 +173,12 @@ if (cmd === 'init') {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const ct = res.headers.get('content-type') || '';
       const ext = (ct.includes('png') ? '.png' : ct.includes('webp') ? '.webp' : ct.includes('svg') ? '.svg' : ct.includes('gif') ? '.gif' : '.jpg');
-      const base = String(it.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'image';
-      const out = path.join(CAT, 'images', it.kind || 'website', base + (path.extname(base) ? '' : ext));
+      // Keep a real extension from the name or URL; otherwise take it from the content type.
+      const given = path.extname(String(it.name)).toLowerCase() || path.extname(new URL(it.url).pathname).toLowerCase();
+      const known = ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif'].includes(given) ? given : '';
+      const stem = String(it.name).replace(/\.[a-z0-9]{2,4}$/i, '');
+      const base = stem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'image';
+      const out = path.join(CAT, 'images', it.kind || 'website', base + (known || ext));
       fs.mkdirSync(path.dirname(out), { recursive: true });
       fs.writeFileSync(out, Buffer.from(await res.arrayBuffer()));
       console.log(`  ok   ${it.kind}/${path.basename(out)}`);

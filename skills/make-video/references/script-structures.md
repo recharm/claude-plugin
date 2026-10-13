@@ -6,8 +6,7 @@ their product, and the claims the brand can actually make (`website-brand.json`)
 short sentences, ~2.6 words per second including the CTA, URLs and numbers spelled as spoken.
 
 Footage recipes use generic beats; map each to the brand's *live* labels (`filters.json`). Filter
-every search with the voice rule from `SKILL.md`. Every ad opens on a hook in the first line and first
-~1.5s, and closes on a CTA of ~6-8 words in its own beat.
+every search with the voice rule from `SKILL.md`, and follow its hook-and-CTA rule.
 
 Placeholders: `[product]` = the confirmed product, `[outcome]` = a result the site or user supports.
 Never ship an invented number, review count or timeframe: replace each example figure with a real one
