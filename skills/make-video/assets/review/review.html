@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ad review</title>
+<style>
+  :root {
+    --bg: #0f1012; --panel: #17181b; --panel2: #1e2024; --line: #2a2d33; --text: #e9eaec; --dim: #9a9ea6; --faint: #6b7079;
+    --accent: #5b9dff; --ok: #3ecf8e; --warn: #f5a524; --bad: #ff5d5d; --radius: 10px;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+  button:hover:not(:disabled) { border-color: #3a3e46; background: #23262b; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: #4a8cf0; }
+  button.small { padding: 3px 8px; font-size: 12px; }
+  select, input[type=text], input[type=number], textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; width: 100%; }
+  textarea { resize: vertical; min-height: 54px; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 3px; }
+
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--dim); font-size: 12px; }
+  .grow { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--panel2); border: 1px solid var(--line); color: var(--dim); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .chip.busy .dot { background: var(--warn); animation: pulse 1s infinite; }
+  .chip.err .dot { background: var(--bad); }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  main { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: 16px; padding: 16px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .stage { position: sticky; top: 64px; display: flex; flex-direction: column; gap: 10px; }
+  .player { background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 9 / 16; max-height: 68vh; margin: 0 auto; width: 100%; position: relative; }
+  .player.landscape { aspect-ratio: 16 / 9; }
+  video { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+  .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); text-align: center; padding: 24px; }
+  .controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tc { font-family: var(--mono); font-size: 13px; color: var(--dim); margin-left: auto; }
+  .tc b { color: var(--text); font-weight: 600; }
+
+  .strip { position: relative; height: 46px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; cursor: pointer; user-select: none; }
+  .strip .sc { position: absolute; top: 0; bottom: 0; border-right: 1px solid var(--bg); display: flex; align-items: flex-end; padding: 0 0 4px 5px; font-size: 11px; color: var(--dim); background: var(--panel2); overflow: hidden; }
+  .strip .sc.cur { background: #24324a; color: #cfe0ff; }
+  .strip .sc.edited { box-shadow: inset 0 3px 0 var(--warn); }
+  .strip .sc.fresh { box-shadow: inset 0 -3px 0 var(--accent); }
+  .strip .nt { position: absolute; top: 4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--warn); }
+  .strip .nt.done { background: var(--ok); }
+  .strip .ph { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; pointer-events: none; }
+
+  .notebar { display: flex; gap: 8px; }
+  .notebar input { flex: 1; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+  .log { font-family: var(--mono); font-size: 11.5px; color: var(--dim); white-space: pre-wrap; max-height: 150px; overflow: auto; margin: 0; }
+  .hint { color: var(--faint); font-size: 12px; }
+  .msg { padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 10px; }
+  .msg.err { background: #3a1d1f; color: #ffb4b4; border: 1px solid #5c2a2d; }
+  .msg.ok { background: #16301f; color: #a7f0c3; border: 1px solid #23502f; }
+  .msg.info { background: #1b2536; color: #c4d8ff; border: 1px solid #2a3a57; }
+
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 10px; }
+  .card.cur { border-color: #3d5a8a; }
+  .card .th { width: 96px; aspect-ratio: 9 / 16; background: #000 center / cover no-repeat; border-radius: 6px; cursor: pointer; }
+  .card .th.landscape { aspect-ratio: 16 / 9; }
+  .card h3 { margin: 0; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .card .meta { color: var(--dim); font-size: 12px; margin-top: 2px; }
+  .card .line { margin-top: 6px; font-size: 13px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--dim); font-weight: 500; }
+  .tag.edit { color: var(--warn); border-color: #5a4318; }
+  .tag.fresh { color: #9cc3ff; border-color: #2c4670; }
+  .tag.trim { color: var(--faint); }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 12.5px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin-top: 8px; }
+  .form .full { grid-column: 1 / -1; }
+  .warnline { font-size: 12px; color: var(--warn); }
+  .notes { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .note { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+  .note .who { font-size: 11px; color: var(--faint); display: flex; gap: 6px; align-items: center; }
+  .note.done { opacity: .65; }
+  .note .reply { margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--ok); color: #bfe9cf; font-size: 12.5px; }
+  .note .acts { margin-left: auto; display: flex; gap: 4px; }
+  .addnote { display: flex; gap: 6px; margin-top: 6px; }
+  .addnote input { flex: 1; }
+  kbd { font-family: var(--mono); font-size: 11px; background: var(--panel2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="title">Ad review</h1>
+    <div class="sub" id="subtitle">loading...</div>
+  </div>
+  <span class="chip" id="state"><span class="dot"></span><span id="stateText">connecting</span></span>
+  <div class="grow"></div>
+  <button id="undo" title="Restore the version before the last applied edit">Undo</button>
+  <button id="apply" class="primary" disabled>Apply &amp; re-render</button>
+  <button id="final" title="Motion blur, the finished MP4 and the gate">Render final</button>
+  <button id="export" title="A layered Premiere Pro / DaVinci Resolve timeline">Export for Premiere / Resolve</button>
+</header>
+<main>
+  <section class="stage">
+    <div class="player" id="player"><video id="v" playsinline preload="auto"></video><div class="empty" id="empty">The first preview is rendering - every scene once. After that, only the scenes you change.</div></div>
+    <div class="controls">
+      <button class="small" id="prevScene" title="Previous scene">&#x23EE;</button>
+      <button class="small" id="back" title="Back one frame (&larr;)">&#x25C0;|</button>
+      <button id="play" title="Play / pause (space)">Play</button>
+      <button class="small" id="fwd" title="Forward one frame (&rarr;)">|&#x25B6;</button>
+      <button class="small" id="nextScene" title="Next scene">&#x23ED;</button>
+      <label style="display:flex;align-items:center;gap:5px;margin:0 0 0 6px;color:var(--dim)"><input type="checkbox" id="loop"> loop scene</label>
+      <span class="tc" id="tc"><b>00:00.00</b></span>
+    </div>
+    <div class="strip" id="strip"><div class="ph" id="ph"></div></div>
+    <div class="notebar"><input type="text" id="quickNote" placeholder="Note at the playhead...  (N)"><button id="quickAdd">Add note</button></div>
+    <div class="panel"><pre class="log" id="log"></pre></div>
+    <div class="hint">Keys: <kbd>space</kbd> play &middot; <kbd>&larr;</kbd><kbd>&rarr;</kbd> frame &middot; <kbd>J</kbd><kbd>L</kbd> 1s &middot; <kbd>[</kbd><kbd>]</kbd> scene &middot; <kbd>N</kbd> note.
+      Notes that need judgement are for Claude: say <i>"apply my review notes"</i> in the chat - the page re-renders by itself when the ad changes.</div>
+  </section>
+  <section>
+    <div id="msgs"></div>
+    <div class="cards" id="cards"></div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const v = $('v');
+  let S = null, rev = -1, pending = {}, lastStatus = null, freshScenes = new Set();
+  const FPS = 30;
+  const api = async (p, body) => {
+    const r = await fetch(p, body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json', 'x-mv-review': '1'}, body: JSON.stringify(body)});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.error || r.statusText), {data: j});
+    return j;
+  };
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const fmt = (t) => { t = Math.max(0, t || 0); const m = Math.floor(t / 60), s = t - m * 60; return `${String(m).padStart(2, '0')}:${s.toFixed(2).padStart(5, '0')}`; };
+  const msg = (text, kind = 'info', ms = 7000) => { const d = document.createElement('div'); d.className = `msg ${kind}`; d.innerHTML = text; $('msgs').prepend(d); if (ms) setTimeout(() => d.remove(), ms); };
+
+  // scene timing on the PREVIEW's clock (offset: where the motion segment sits in the edit)
+  const span = (k) => { const t = S.timing.scenes[k]; return {a: S.offset + t.cut0, b: S.offset + t.cut1}; };
+  const sceneAt = (t) => { if (!S) return -1; for (let k = 0; k < S.timing.scenes.length; k++) { const {a, b} = span(k); if (t >= a && t < b) return k; } return S.timing.scenes.length - 1; };
+  const kinds = (s) => (s.visuals || []).map((x) => x.kind).filter((k) => !['particles', 'sparkles', 'rays', 'scribble'].includes(k));
+  const totalOut = () => (v.duration && isFinite(v.duration) ? v.duration : S.offset + S.timing.total);
+
+  // ---- render the cards and the strip
+  const opts = (list, cur, extra = '') => extra + list.map((x) => `<option value="${esc(x)}"${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('');
+  const card = (s, k) => {
+    const t = S.timing.scenes[k], p = pending[k] || {}, view = {...s, ...p.patch};
+    const notes = (S.notes || []).filter((n) => n.scene === k);
+    const tr = view.transition;
+    const isFoot = s.type === 'footage';
+    const land = S.ad.aspect === '16:9' ? ' landscape' : '';
+    return `<div class="card" id="card${k}" data-k="${k}">
+      <div class="th${land}" data-seek="${k}" style="background-image:url('/thumb/${k}?r=${rev}')" title="Jump to this scene"></div>
+      <div>
+        <h3>S${k + 1} <span class="tag">${esc(s.type)}${kinds(s).length ? ' &middot; ' + esc(kinds(s).join(', ')) : ''}</span>
+          ${k > 0 ? `<span class="tag">in: ${esc(s.transition ? s.transition.type + (s.transition.variant ? '/' + s.transition.variant : '') : 'cut')}</span>` : ''}
+          ${pending[k] ? '<span class="tag edit">edited - not rendered</span>' : ''}${freshScenes.has(k) ? '<span class="tag fresh">re-rendered</span>' : ''}</h3>
+        <div class="meta">${fmt(S.offset + t.cut0)} &ndash; ${fmt(S.offset + t.cut1)} &middot; ${s.duration.toFixed(2)}s${s.bgStyle ? ' &middot; ' + esc(s.bg || '') + ' ' + esc(s.bgStyle) : ''}${isFoot ? ' &middot; ' + esc(s.src) + (s.camera ? ' (' + esc(s.camera) + ')' : '') : ''}</div>
+        ${s.text || s.sub ? `<div class="line">${s.strike ? `<s>${esc(s.strike)}</s> ` : ''}${esc(s.text || '')}${s.sub ? ` <span style="color:var(--dim)">&middot; ${esc(s.sub)}</span>` : ''}</div>` : ''}
+        <details${pending[k] ? ' open' : ''}><summary>Edit this scene</summary>
+          <div class="form">
+            <div class="full"><label>Heading</label><input type="text" data-f="text" value="${esc(view.text || '')}"></div>
+            <div class="full"><label>Sub line</label><input type="text" data-f="sub" value="${esc(view.sub || '')}"></div>
+            <div><label>Text animation</label><select data-f="preset">${opts(S.vocab.PRESETS, view.preset || '', view.preset ? '' : '<option value="">(default)</option>')}</select></div>
+            <div><label>Length (s)</label><input type="number" data-f="duration" step="0.1" min="0.5" max="30" value="${view.duration}"></div>
+            ${s.type === 'footage' ? `<div><label>Camera</label><select data-f="camera">${opts(S.vocab.CAMERAS, view.camera || 'pushin')}</select></div><div></div>`
+              : `<div><label>Background tone</label><select data-f="bg">${opts(S.vocab.BG_TONES, view.bg || '', view.bg ? '' : '<option value="">(default)</option>')}</select></div>
+                 <div><label>Background style</label><select data-f="bgStyle">${opts(S.vocab.BG_STYLES, view.bgStyle || '', view.bgStyle ? '' : '<option value="">(default)</option>')}</select></div>`}
+            ${k > 0 ? `<div><label>Transition in</label><select data-f="ttype">${opts(['cut', ...S.vocab.TRANSITION_TYPES], tr ? tr.type : 'cut')}</select></div>
+              <div><label>Carry shape</label><select data-f="tvariant"${tr && tr.type === 'carry' ? '' : ' disabled'}>${opts(S.vocab.CARRY_VARIANTS, tr && tr.variant || 'dot')}</select></div>` : ''}
+            <div class="full warnline" data-dwarn style="display:${p.patch && 'duration' in p.patch ? 'block' : 'none'}">A new length moves every later scene against the voiceover - check the sync after the render.</div>
+            <div class="full"><details><summary>Scene JSON (advanced - replaces the scene)</summary><textarea data-f="json" rows="8" style="font-family:var(--mono);font-size:12px;margin-top:6px">${esc(p.json || JSON.stringify(s, null, 1))}</textarea></details></div>
+            <div class="full" style="display:flex;gap:6px"><button class="small" data-act="revert">Discard edits</button><span class="hint" style="align-self:center">Edits wait for "Apply &amp; re-render".</span></div>
+          </div>
+        </details>
+        <div class="notes">${notes.map(noteHtml).join('')}</div>
+        <div class="addnote"><input type="text" data-note placeholder="Note on this scene..."><button class="small" data-act="note">Add</button></div>
+      </div>
+    </div>`;
+  };
+  const noteHtml = (n) => `<div class="note${n.status !== 'open' ? ' done' : ''}" data-id="${n.id}">
+      <div class="who">${n.t != null ? `<a href="#" data-t="${n.t}" style="color:var(--accent)">${fmt(n.t)}</a>` : ''}<span>${esc(n.status)}</span>
+        <span class="acts">${n.status === 'open' ? '<button class="small" data-nact="done">Done</button>' : '<button class="small" data-nact="open">Reopen</button>'}<button class="small" data-nact="delete">Delete</button></span></div>
+      <div>${esc(n.text)}</div>${n.reply ? `<div class="reply">Claude: ${esc(n.reply)}</div>` : ''}</div>`;
+  const drawStrip = () => {
+    const st = $('strip'), tot = totalOut();
+    st.querySelectorAll('.sc,.nt').forEach((e) => e.remove());
+    S.timing.scenes.forEach((t, k) => {
+      const {a, b} = span(k), d = document.createElement('div');
+      d.className = `sc${pending[k] ? ' edited' : ''}${freshScenes.has(k) ? ' fresh' : ''}`;
+      d.style.left = `${(a / tot) * 100}%`; d.style.width = `${((b - a) / tot) * 100}%`;
+      d.textContent = `S${k + 1}`; d.dataset.k = k;
+      st.appendChild(d);
+    });
+    (S.notes || []).filter((n) => n.t != null).forEach((n) => { const d = document.createElement('div'); d.className = `nt${n.status !== 'open' ? ' done' : ''}`; d.style.left = `${(n.t / tot) * 100}%`; d.title = n.text; st.appendChild(d); });
+  };
+  const draw = () => {
+    $('title').textContent = `${S.name} - review`;
+    const open = (S.notes || []).filter((n) => n.status === 'open').length;
+    $('subtitle').textContent = `${S.brand} · ${S.ad.scenes.length} scenes · ${(S.offset + S.timing.total).toFixed(2)}s${S.edl ? ' · with voiceover, music & captions' : ' · animation only'} · ${open} open note${open === 1 ? '' : 's'}`;
+    $('player').classList.toggle('landscape', S.ad.aspect === '16:9');
+    $('cards').innerHTML = S.ad.scenes.map(card).join('');
+    $('apply').disabled = !Object.keys(pending).length;
+    $('apply').textContent = Object.keys(pending).length ? `Apply & re-render (${Object.keys(pending).length})` : 'Apply & re-render';
+    $('undo').disabled = !S.versions;
+    $('export').disabled = !S.edl;
+    drawStrip();
+  };
+  const load = async () => { S = await api('/api/state'); draw(); };
+
+  // ---- edits are staged per scene until Apply
+  $('cards').addEventListener('input', (e) => {
+    const el = e.target, cardEl = el.closest('.card'); if (!cardEl || !el.dataset.f) return;
+    const k = Number(cardEl.dataset.k), s = S.ad.scenes[k], f = el.dataset.f;
+    const p = (pending[k] = pending[k] || {patch: {}});
+    if (f === 'json') { p.json = el.value; }
+    else if (f === 'duration') { const n = parseFloat(el.value); if (isFinite(n)) p.patch.duration = n; cardEl.querySelector('[data-dwarn]').style.display = 'block'; }
+    else if (f === 'ttype' || f === 'tvariant') {
+      const type = cardEl.querySelector('[data-f=ttype]').value, variant = cardEl.querySelector('[data-f=tvariant]').value;
+      cardEl.querySelector('[data-f=tvariant]').disabled = type !== 'carry';
+      p.patch.transition = type === 'cut' ? null : {type, variant};
+    } else p.patch[f] = el.value;
+    if (!p.json && !Object.keys(p.patch).length) delete pending[k];
+    const h3 = cardEl.querySelector('h3'), tag = h3.querySelector('.tag.edit');
+    if (pending[k] && !tag) h3.insertAdjacentHTML('beforeend', '<span class="tag edit">edited - not rendered</span>');
+    if (!pending[k] && tag) tag.remove();
+    $('apply').disabled = !Object.keys(pending).length;
+    $('apply').textContent = `Apply & re-render (${Object.keys(pending).length})`;
+    drawStrip();
+  });
+  $('cards').addEventListener('click', async (e) => {
+    const el = e.target, cardEl = el.closest('.card');
+    if (el.dataset.seek != null) { seekScene(Number(el.dataset.seek)); return; }
+    if (el.dataset.t != null) { e.preventDefault(); v.currentTime = Number(el.dataset.t); return; }
+    if (!cardEl) return;
+    const k = Number(cardEl.dataset.k);
+    if (el.dataset.act === 'revert') { delete pending[k]; draw(); }
+    if (el.dataset.act === 'note') {
+      const inp = cardEl.querySelector('[data-note]'); if (!inp.value.trim()) return;
+      const cur = sceneAt(v.currentTime), t = cur === k ? v.currentTime : span(k).a + 0.05;
+      const r = await api('/api/note', {op: 'add', scene: k, t, text: inp.value}); S.notes = r.notes; draw();
+    }
+    if (el.dataset.nact) { const id = el.closest('.note').dataset.id; const r = await api('/api/note', el.dataset.nact === 'delete' ? {op: 'delete', id} : {op: 'status', id, status: el.dataset.nact}); S.notes = r.notes; draw(); }
+  });
+  $('cards').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.dataset.note != null) e.target.closest('.card').querySelector('[data-act=note]').click(); });
+
+  $('apply').onclick = async () => {
+    const edits = Object.entries(pending).map(([k, p]) => (p.json && p.json !== JSON.stringify(S.ad.scenes[k], null, 1) ? {index: Number(k), json: p.json} : {index: Number(k), patch: p.patch}));
+    try {
+      const r = await api('/api/apply', {edits});
+      pending = {}; await load();
+      msg(`Applied - re-rendering the changed scenes.${r.warns && r.warns.length ? '<br>' + r.warns.map(esc).join('<br>') : ''}`, 'info');
+    } catch (err) { msg(`<b>${esc(err.message)}</b>${(err.data && err.data.blocks || []).map((b) => '<br>' + esc(b)).join('')}`, 'err', 0); }
+  };
+  $('undo').onclick = async () => { try { const r = await api('/api/undo', {}); pending = {}; await load(); msg(`Restored the version from ${new Date(r.restored.at).toLocaleTimeString()} (${esc(r.restored.why)}) - from cache, so it's quick.`); } catch (err) { msg(esc(err.message), 'err'); } };
+  $('final').onclick = async () => { await api('/api/final', {}); msg('Final render started: motion blur, then the finished MP4 and the gate.'); };
+  $('export').onclick = async () => { await api('/api/export', {}); msg('Exporting the layered timeline for Premiere / Resolve...'); };
+
+  // ---- player
+  const seekScene = (k) => { if (k < 0 || k >= S.timing.scenes.length) return; v.currentTime = span(k).a + 0.01; };
+  $('play').onclick = () => (v.paused ? v.play() : v.pause());
+  v.onplay = () => ($('play').textContent = 'Pause'); v.onpause = () => ($('play').textContent = 'Play');
+  $('back').onclick = () => { v.pause(); v.currentTime = Math.max(0, v.currentTime - 1 / FPS); };
+  $('fwd').onclick = () => { v.pause(); v.currentTime = Math.min(totalOut(), v.currentTime + 1 / FPS); };
+  $('prevScene').onclick = () => { const k = sceneAt(v.currentTime); seekScene(v.currentTime - span(k).a > 0.3 ? k : k - 1); };
+  $('nextScene').onclick = () => seekScene(sceneAt(v.currentTime) + 1);
+  $('strip').onclick = (e) => { const r = $('strip').getBoundingClientRect(); v.currentTime = ((e.clientX - r.left) / r.width) * totalOut(); };
+  let curScene = -1;
+  const tick = () => {
+    if (S) {
+      const t = v.currentTime, k = sceneAt(t);
+      $('tc').innerHTML = `<b>${fmt(t)}</b> / ${fmt(totalOut())} &middot; S${k + 1} &middot; f${Math.round(t * FPS)}`;
+      $('ph').style.left = `${(t / totalOut()) * 100}%`;
+      if (k !== curScene) {
+        curScene = k;
+        document.querySelectorAll('.card.cur,.strip .sc.cur').forEach((e) => e.classList.remove('cur'));
+        const c = $(`card${k}`); if (c) c.classList.add('cur');
+        const sc = document.querySelector(`.strip .sc[data-k="${k}"]`); if (sc) sc.classList.add('cur');
+      }
+      if ($('loop').checked && !v.paused && curScene >= 0) { const {a, b} = span(curScene); if (t >= b - 0.03) v.currentTime = a; }
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  const addQuick = async () => { const t = $('quickNote').value.trim(); if (!t) return; const r = await api('/api/note', {op: 'add', scene: sceneAt(v.currentTime), t: v.currentTime, text: t}); $('quickNote').value = ''; S.notes = r.notes; draw(); };
+  $('quickAdd').onclick = addQuick;
+  $('quickNote').addEventListener('keydown', (e) => { if (e.key === 'Enter') addQuick(); });
+  document.addEventListener('keydown', (e) => {
+    if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    const k = e.key;
+    if (k === ' ') { e.preventDefault(); $('play').click(); }
+    else if (k === 'ArrowLeft') { e.preventDefault(); $('back').click(); }
+    else if (k === 'ArrowRight') { e.preventDefault(); $('fwd').click(); }
+    else if (k === 'j' || k === 'J') v.currentTime = Math.max(0, v.currentTime - 1);
+    else if (k === 'l' || k === 'L') v.currentTime = Math.min(totalOut(), v.currentTime + 1);
+    else if (k === '[') $('prevScene').click();
+    else if (k === ']') $('nextScene').click();
+    else if (k === 'n' || k === 'N') { e.preventDefault(); $('quickNote').focus(); }
+  });
+
+  // ---- status: a new render swaps the video in place, keeping the playhead
+  let handling = Promise.resolve();
+  const handle = (st) => (handling = handling.then(() => onStatus(st)).catch(() => {}));
+  const onStatus = async (st) => {
+    {
+      const chip = $('state');
+      chip.classList.toggle('busy', st.busy); chip.classList.toggle('err', !st.busy && st.last && !st.last.ok);
+      $('stateText').textContent = st.busy ? (st.step || st.job) + '...' : st.last ? (st.last.ok ? `up to date · ${st.last.secs}s` : 'last job failed') : 'idle';
+      $('log').textContent = st.log.join('\n'); $('log').scrollTop = 1e9;
+      ['final', 'export', 'apply', 'undo'].forEach((id) => { if (st.busy && st.job !== 'preview' && id !== 'apply') $(id).disabled = true; });
+      if (!st.busy && S) { $('final').disabled = false; $('export').disabled = !S.edl; $('undo').disabled = !S.versions; }
+      if (lastStatus && lastStatus.busy && !st.busy && st.last) {
+        if (st.last.kind === 'final') msg(st.last.ok ? `Final: ${esc(st.last.summary)}` : esc(st.last.summary), st.last.ok ? 'ok' : 'err', 0);
+        if (st.last.kind === 'export') msg(st.last.ok ? `${esc(st.last.summary)}<br>Premiere: File &gt; Import &gt; sequence.xml &middot; Resolve: File &gt; Import &gt; Timeline` : esc(st.last.summary), st.last.ok ? 'ok' : 'err', 0);
+        if (st.last.kind === 'preview' && !st.last.ok) msg(esc(st.last.summary), 'err', 0);
+      }
+      if (st.rev !== rev && st.rev > 0) {
+        const t = v.currentTime, playing = !v.paused;
+        rev = st.rev;
+        freshScenes = new Set(st.changed || []);
+        v.src = `/video?r=${rev}`; $('empty').style.display = 'none';
+        v.addEventListener('loadedmetadata', () => { v.currentTime = Math.min(t, v.duration - 0.05); if (playing) v.play(); }, {once: true});
+        await load();
+        if (st.last && st.last.kind === 'preview' && st.last.ok && st.last.summary) msg(`Rendered: ${esc(st.last.summary)}`, 'ok');
+      }
+      lastStatus = st;
+    }
+  };
+  const poll = async () => { try { handle(await api('/api/status')); } catch (e) { $('stateText').textContent = 'server stopped'; $('state').classList.add('err'); } };
+  load().then(() => {
+    const es = new EventSource('/api/events');
+    es.onmessage = (e) => handle(JSON.parse(e.data));
+    setInterval(poll, 5000);
+    addEventListener('focus', poll);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+    poll();
+  }).catch((e) => msg(esc(e.message), 'err', 0));
+})();
+</script>
+</body>
+</html>

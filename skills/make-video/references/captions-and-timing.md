@@ -33,17 +33,61 @@ clips and user uploads as "has captions" until a sprite proves otherwise.
   sprite and put the text in the gap - for a creator holding a box at chest height that is often just
   under the chin (~0.42) or below the product. Platform UI covers the top 8% and bottom 12%.
 
+## Animated captions (word by word, in the brand's colours)
+
+Plain burned-in captions are the default. For a livelier ad, captions can instead be rendered by HyperFrames as a
+transparent layer, each word lighting up as it is said, and laid over the whole cut by `build_ad.mjs`:
+
+```bash
+node scripts/captions_from_words.mjs --edl edl.json --words transcripts.json --style auto --brand <slug> --write
+```
+
+`--style auto` picks a style that suits the brand (motifs.json `style`) and differs from its last two ads; or name one:
+
+| Style | Look | Suits |
+|---|---|---|
+| `pop` | Each word rises in as it is spoken, white with a dark edge | Anything; the safe default |
+| `karaoke` | The whole burst shows; spoken words turn the brand accent | Playful, energetic |
+| `pill` | A light pill; words go from grey to the brand's ink as they are said | Premium, clean, clinical |
+| `highlight` | An accent box jumps to the word being said | Playful, explainers |
+| `slam` | Words slam in big, uppercase, with a small shake on each | Bold, hooks, urgency |
+| `gradient` | A brand gradient fills each word as it is said | Premium, playful |
+| `neon` | Accent glow; flickers on | Bold, night, energy drinks, gaming |
+| `boxed` | The classic dark box behind each line | Clinical, testimonials, anything with busy footage |
+
+It writes `captionStyle.animated` into the EDL and keeps each caption's word timings (`words`). `build_ad` renders the
+layer with the brand's HyperFrames project - `captionStyle.project`, or the project a `motion` segment came from - and
+falls back to plain captions (with a warning) when there is none. The `punch` caption is set larger in every style.
+Bands (`upper`, `middle`, `lower`) and `y` place them as before. The Premiere and After Effects hand-offs still get
+the captions as plain text (editable); the animated style lives in the MP4.
+
 ## Text animation: one vocabulary for both renderers
 
-Animate to do a job. The same four presets exist in the ffmpeg captions and (from Stage 3) the Remotion
+Animate to do a job. The same four presets exist in the ffmpeg captions and (from Stage 3) the HyperFrames
 template - use these names in plans:
 
-| Rule | Job | ffmpeg caption `anim` | Remotion preset |
+| Rule | Job | ffmpeg caption `anim` | Motion-graphics preset |
 |---|---|---|---|
 | **fade+rise** | Standard entrance - most text | `fadeup` | `fadeRise` |
 | **fade+drop** | Something dismissed or de-emphasised | `fadedown` | `fadeDrop` |
 | **scale-pop** | Emphasis on one keyword | `pop` (`punch` for the one main claim) | `scalePop` |
 | **slide-in-sequence** | An ordered list of benefits | `slideleft` + `lines` + `stagger` | `slideInSequence` |
+
+Headings in motion-graphics scenes also take **kinetic presets** (`"preset"` on the scene; the planner rotates them by
+beat - hooks snap, claims land, never the same twice in a row):
+
+| Preset | What it does | Use for |
+|---|---|---|
+| `slam` | Lands big with a short shake | A hook, a problem, an urgent CTA (never premium) |
+| `perWord` | Words rise in one after another, slightly rotated | Claims, CTAs |
+| `perChar` | Letters drop in one by one | Short punchy words |
+| `scramble` | Characters decode into the words | Hooks, tech, "the truth about" |
+| `typewriter` | Typed on with a caret | Hooks, clinical, "searching for" |
+| `tracking` | Wide letter-spacing closes in, out of a blur | Premium reveals, product names |
+| `blurIn` | Resolves out of a focus blur | Calm, premium |
+| `marker` | A highlighter sweeps behind the words | The one key claim |
+| `mask` | Each word rises out of a line | Editorial, claims |
+| `strike` | `"strike"` is crossed out in red, then replaced by the heading | The old way -> the brand ("Sugar crash" -> "Steady energy") |
 | fade (snap) | The hook line: in under 300ms, no movement | `fade` | `fade` (default on scene 1) |
 | none | A legal or dosage line that shouldn't draw the eye | `none` | - |
 
@@ -82,7 +126,7 @@ the only voice you move is the one you mean to.
 
 **On VO-led and motion-graphics ads** there is no clip audio to move, so do it one layer up: start a VO
 line under the outgoing shot (a J in effect) or hold it over the incoming one (an L). Write the VO to
-the cut points the builder prints, or offset the `<Audio>` start against the `<Sequence>` in Remotion.
+the cut points the builder prints, or offset the scene's start in the ad JSON (motion graphics are rendered silent and mixed by build_ad).
 
 **Where a split edit is wrong:** across a testimonial jump cut. And not on every join - a split edit
 says "these two shots are one thought"; if every cut says it, none do.

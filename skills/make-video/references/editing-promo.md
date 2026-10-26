@@ -82,7 +82,7 @@ All are ffmpeg `xfade` transitions.
 | **Texture** | `pixelize`, `hblur` | Rarely right; `hblur` can work into a product hero |
 
 There is **no whip pan in the ffmpeg path** (it needs motion blur `xfade` can't produce). Build whip
-pans in Remotion, or use a fast `swipeleft` at 0.2s.
+pans in a motion-graphics scene, or use a fast `swipeleft` at 0.2s.
 
 ## Simulated camera moves within one clip
 

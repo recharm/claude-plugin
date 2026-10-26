@@ -1,20 +1,18 @@
 #!/usr/bin/env node
 /**
- * mg_init.mjs - set up (or refresh) the brand's Remotion project from assets/remotion-template.
+ * hf_init.mjs - set up (or refresh) the brand's HyperFrames project.
  *
- *   node mg_init.mjs --brand <slug> --aspect 9:16|16:9 [--dir <path>] [--no-install]
+ *   node hf_init.mjs --brand <slug> --aspect 9:16|16:9 [--dir <path>] [--no-install]
  *
- * The project lives in the brand cache (<root>/brands/<slug>/remotion) so `npm install` runs once per
- * brand, not once per ad. Each run refreshes the template code and writes theme.json from brand.json:
- * palette, fonts (brand files from the cache's fonts/, else the bundled Poppins), the logo EXACTLY as
- * published (copied, never modified), product packshots, and the site URL. ads/ and node_modules/ are kept.
+ * The project lives in the brand cache (<root>/brands/<slug>/hyperframes). Each run refreshes the runtime
+ * (assets/vendor/mv-runtime.js - the animation library - and GSAP) and writes theme.json from brand.json: palette,
+ * fonts (brand files from the cache's fonts/, else the bundled Poppins), the logo EXACTLY as published (copied, never
+ * modified), product packshots, and the site URL. ads/, out/, assets/clips, assets/cutouts and assets/custom are kept.
+ * HyperFrames itself (pinned) is installed once for every brand in <root>/tools/hyperframes.
  *
- * Then: write ads/<name>.json (shape: ad.json) and render
- *   npx remotion render src/index.ts Ad out/<name>.mp4 --props=ads/<name>.json --crf=16
- *   npx remotion render src/index.ts Overlay out/<name>-overlay.mov --props=ads/<name>-overlay.json \
- *       --image-format=png --pixel-format=yuva444p10le --codec=prores --prores-profile=4444
+ * Then: write ads/<name>.json (shape: ad.json) and build it
+ *   node hf_build.mjs <project>/ads/<name>.json --out <project>/out/<name>.mp4 [--draft] [--blur]
  */
-
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -27,32 +25,43 @@ const opt = (n, d) => { const i = argv.indexOf(n); return i === -1 ? d : argv[i 
 const brand = opt('--brand');
 const aspect = opt('--aspect', '9:16');
 if (!brand || !['9:16', '16:9'].includes(aspect)) {
-  console.error('usage: node mg_init.mjs --brand <slug> --aspect 9:16|16:9 [--dir <path>] [--no-install]');
+  console.error('usage: node hf_init.mjs --brand <slug> --aspect 9:16|16:9 [--dir <path>] [--no-install]');
   process.exit(2);
 }
 const ROOT = process.env.MAKE_VIDEO_ROOT || path.join(os.homedir(), '.claude', 'make-video');
 const B = path.join(ROOT, 'brands', brand);
-const dir = path.resolve(opt('--dir', path.join(B, 'remotion')));
-const TPL = path.resolve(HERE, '..', 'assets', 'remotion-template');
+const dir = path.resolve(opt('--dir', path.join(B, 'hyperframes')));
+const RUNTIME = path.resolve(HERE, '..', 'assets', 'hyperframes-runtime', 'dist', 'mv-runtime.js');
+const SCAFFOLD = path.resolve(HERE, '..', 'assets', 'hyperframes-project');
 const FONTS = path.resolve(HERE, '..', 'assets', 'fonts');
 
 const brandJson = path.join(B, 'brand.json');
 if (!fs.existsSync(brandJson)) { console.error(`no brand cache for "${brand}" - build it first (catalog_tool.mjs)`); process.exit(1); }
 const bj = JSON.parse(fs.readFileSync(brandJson, 'utf8'));
 
-// ---- copy template code (keep node_modules, ads/, out/)
-const copyDir = (src, dst) => {
-  fs.mkdirSync(dst, {recursive: true});
-  for (const e of fs.readdirSync(src, {withFileTypes: true})) {
-    if (['node_modules', 'out', 'ads'].includes(e.name)) continue;
-    const s = path.join(src, e.name), d = path.join(dst, e.name);
-    // src/custom/ holds this brand's bespoke scenes and their registry - seed it once, never overwrite it.
-    if (e.isDirectory()) copyDir(s, d);
-    else if (!(path.basename(path.dirname(d)) === 'custom' && fs.existsSync(d))) fs.copyFileSync(s, d);
-  }
-};
-copyDir(TPL, dir);
-for (const d of ['public/fonts', 'public/products', 'ads', 'out']) fs.mkdirSync(path.join(dir, d), {recursive: true});
+// ---- HyperFrames (pinned) and GSAP, once for every brand
+const TOOLS = path.join(ROOT, 'tools', 'hyperframes');
+const PIN = {hyperframes: '0.8.185', gsap: '3.14.2'};
+const toolsReady = () => fs.existsSync(path.join(TOOLS, 'node_modules', 'hyperframes', 'package.json')) && fs.existsSync(path.join(TOOLS, 'node_modules', 'gsap', 'dist', 'gsap.min.js'))
+  && JSON.parse(fs.readFileSync(path.join(TOOLS, 'node_modules', 'hyperframes', 'package.json'), 'utf8')).version === PIN.hyperframes;
+if (!argv.includes('--no-install') && !toolsReady()) {
+  fs.mkdirSync(TOOLS, {recursive: true});
+  fs.writeFileSync(path.join(TOOLS, 'package.json'), JSON.stringify({name: 'make-video-hyperframes-tools', private: true, dependencies: PIN}, null, 2));
+  console.log(`
+  installing HyperFrames ${PIN.hyperframes} + GSAP ${PIN.gsap} in ${TOOLS} (first time only, ~1 min)...`);
+  const win = process.platform === 'win32';
+  const r = spawnSync(win ? 'npm install --no-audit --no-fund --loglevel=error' : 'npm', win ? [] : ['install', '--no-audit', '--no-fund', '--loglevel=error'], {cwd: TOOLS, stdio: 'inherit', shell: win});
+  if (r.status !== 0) { console.error('  npm install failed - see setup.md (HyperFrames)'); process.exit(1); }
+}
+if (!fs.existsSync(RUNTIME)) { console.error(`  the runtime is missing (${RUNTIME}) - run: node assets/hyperframes-runtime/build.mjs`); process.exit(1); }
+
+// ---- project folders; the runtime and GSAP are refreshed every run, the scaffold files only seeded
+for (const d of ['assets/fonts', 'assets/products', 'assets/clips', 'assets/cutouts', 'assets/custom', 'assets/vendor', 'ads', 'out']) fs.mkdirSync(path.join(dir, d), {recursive: true});
+fs.copyFileSync(RUNTIME, path.join(dir, 'assets', 'vendor', 'mv-runtime.js'));
+const gsapFile = path.join(TOOLS, 'node_modules', 'gsap', 'dist', 'gsap.min.js');
+if (fs.existsSync(gsapFile)) fs.copyFileSync(gsapFile, path.join(dir, 'assets', 'vendor', 'gsap.min.js'));
+else console.log('  WARN   GSAP is not installed yet - run without --no-install once');
+for (const f of ['ad.json', 'CREDITS.md']) if (!fs.existsSync(path.join(dir, f))) fs.copyFileSync(path.join(SCAFFOLD, f), path.join(dir, f));
 
 // ---- palette
 const hex = (k, d) => {
@@ -74,7 +83,7 @@ const color = {
 };
 
 // ---- fonts: brand files first (cache fonts/), else bundled Poppins
-const pub = (p) => path.join(dir, 'public', p);
+const pub = (p) => path.join(dir, 'assets', p);
 const files = [];
 const brandFonts = path.join(B, 'fonts');
 const heading = bj.fonts?.heading || 'Poppins';
@@ -123,7 +132,7 @@ let url = '';
 try { url = new URL(bj.website).hostname.replace(/^www\./, ''); } catch { url = bj.website || ''; }
 
 const theme = {
-  _about: `Written by mg_init.mjs from ${brandJson} on ${new Date().toISOString().slice(0, 10)} - edit brand.json, not this file.`,
+  _about: `Written by hf_init.mjs from ${brandJson} on ${new Date().toISOString().slice(0, 10)} - edit brand.json, not this file.`,
   aspect, url, logo,
   endCardText: 'onPrimary',
   color,
@@ -136,7 +145,7 @@ const motifsSrc = path.join(B, 'motifs.json');
 let motifs = null;
 if (fs.existsSync(motifsSrc)) {
   motifs = JSON.parse(fs.readFileSync(motifsSrc, 'utf8'));
-  // Packshot paths in motifs are relative to public/ - keep only the ones that were copied.
+  // Packshot paths in motifs are relative to assets/ - keep only the ones that were copied.
   motifs.packshots = (motifs.packshots || []).filter((p) => fs.existsSync(pub(p)));
   fs.writeFileSync(path.join(dir, 'motifs.json'), JSON.stringify(motifs, null, 2));
 } else {
@@ -146,14 +155,10 @@ if (fs.existsSync(motifsSrc)) {
 console.log(`\n  ${bj.prettyName || brand} motion project: ${dir}`);
 console.log(`  aspect ${aspect} - primary ${color.primary}, secondary ${color.secondary}, accent ${color.accent}, text on primary ${color.onPrimary}`);
 console.log(`  fonts  ${usedHeading}${usedBody !== usedHeading ? ` / ${usedBody}` : ''} (${files.length} files)`);
-console.log(`  logo   ${logo ? `public/${logo} (as published)` : 'none'}   packshots ${packshots.length} in public/products/`);
+console.log(`  logo   ${logo ? `assets/${logo} (as published)` : 'none'}   packshots ${packshots.length} in assets/products/`);
 if (motifs) console.log(`  motifs ${motifs.category}, ${motifs.style}, props ${(motifs.props || []).map((p) => p.shape).join('/')}, problem ${(motifs.problemObjects || []).map((p) => p.shape).join('/')}, ${Object.keys(motifs.icons || {}).length} claim icons${motifs.confirmed ? '' : '  (NOT confirmed yet)'}`);
 
-// ---- install once
-if (!argv.includes('--no-install') && !fs.existsSync(path.join(dir, 'node_modules', 'remotion'))) {
-  console.log('\n  installing Remotion (first time for this brand, ~1-3 min)...');
-  const r = spawnSync(process.platform === 'win32' ? 'npm install --no-audit --no-fund --loglevel=error' : 'npm', process.platform === 'win32' ? [] : ['install', '--no-audit', '--no-fund', '--loglevel=error'], {cwd: dir, stdio: 'inherit', shell: process.platform === 'win32'});
-  if (r.status !== 0) { console.error('  npm install failed'); process.exit(1); }
-}
-console.log(`\n  next: write ${path.join(dir, 'ads', '<name>.json')} (shape: ad.json), then`);
-console.log(`        cd "${dir}" && npx remotion render src/index.ts Ad out/<name>.mp4 --props=ads/<name>.json\n`);
+console.log(`
+  next: write ${path.join(dir, 'ads', '<name>.json')} (shape: ad.json), check it with mg_check.mjs, then`);
+console.log(`        node hf_build.mjs "${path.join(dir, 'ads', '<name>.json')}" --out "${path.join(dir, 'out', '<name>.mp4')}" --draft
+`);

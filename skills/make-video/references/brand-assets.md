@@ -33,7 +33,7 @@ usually 404. Read in this order and stop when covered:
    from CSS custom properties (`--color-*`).
 5. **Offers** - banner/promo text. Record each with its page and the date: offers expire.
 
-Record in `brand.json` - in exactly this shape, because `mg_init.mjs` and `critic_pack.mjs` read it:
+Record in `brand.json` - in exactly this shape, because `hf_init.mjs` and `critic_pack.mjs` read it:
 
 ```json
 "palette": {"primary": {"hex": "#3F0791", "role": "buttons, headings"}, "secondary": {"hex": "..."}, "accent": {"hex": "..."},
@@ -55,7 +55,7 @@ brand itself published; never save images from third-party sites.
 **Save the logo exactly as published.** If the site only has it as an inline SVG, save that SVG
 byte-for-byte - `harvest_site.mjs --write` does this when it can find it (`images/website/logo-inline.svg`). Many sites
 colour an inline logo with CSS, so the saved file has no fill of its own and shows black elsewhere: record the site's
-CSS colour as `logo.cssFill` in `brand.json` - `mg_init` displays the logo in exactly that colour, the way the site
+CSS colour as `logo.cssFill` in `brand.json` - `hf_init` displays the logo in exactly that colour, the way the site
 does. That reproduces the published logo; any other colour is a recolour. Never recolour, redraw, crop or "fix" it, and never save a modified copy next to the
 original - a recoloured logo in the cache will end up in an ad. If the published colour won't read on
 a background, change the background, not the logo.
@@ -72,7 +72,7 @@ use the bundled Poppins (OFL) or the closest Google Font and say so in the plan.
 1. Assets the user provided or already on the brand website: logos, packshots, lifestyle imagery, and
    the library footage itself.
 2. Assets generated natively in the composition: icons, shapes, backgrounds, bars, gradients, simple
-   illustrations (CSS/SVG in Remotion, or ffmpeg drawbox/drawtext).
+   illustrations (CSS/SVG in the HyperFrames scenes, or ffmpeg drawbox/drawtext).
 3. Web-sourced stock only when 1 and 2 cannot cover the need, and only from sources licensable for
    commercial ad use (confirm the licence per asset). **Flag every such asset in the delivery summary**
    (what, where from, licence) so it can be swapped before the final render.

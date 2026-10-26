@@ -100,6 +100,8 @@ const ICON_KW = [
   ['rated', 'star', false], ['recycl', 'recycle', false], ['sustainab', 'globe', false], ['compostable', 'recycle', false], ['plastic-free', 'recycle', false],
   ['net carbs', 'grain', false], ['carbs', 'grain', false], ['calorie', 'flame', false], ['fiber', 'wheat', false], ['collagen', 'sparkle', false],
   ['glow', 'sparkle', false], ['odor', 'waves', false], ['odour', 'waves', false], ['clump', 'cube', false], ['tastes', 'heart', false], ['delicious', 'heart', false],
+  ['dust-free', 'waves', true], ['dust free', 'waves', true], ['non-toxic', 'shield', false], ['non toxic', 'shield', false],
+  ['ph level', 'flask', false], ['health', 'heart', false], ['kidney', 'drop', false], ['urinary', 'drop', false], ['vet', 'shield', false],
   ['sugar alcohol', 'cube', true], ['corn syrup', 'drop', true], ['made in', 'globe', false], ['kids', 'smile', false], ['family', 'users', false],
   ['customers', 'users', false], ['fast', 'bolt', false], ['minutes', 'clock', false], ['daily', 'calendar', false], ['save', 'percent', false],
 ];
@@ -111,7 +113,8 @@ for (const [kw, icon, slash] of ICON_KW) if (brandWords.includes(kw)) icons[kw] 
 // ------------------------------------------------------------------ claims -> visuals
 const claimVisuals = [];
 for (const c of claims) {
-  const frags = c.text.split(/,|\band\b|\||;/i).map((s) => s.trim()).filter(Boolean);
+  // split on list commas, not the thousands comma in "18,000+"
+  const frags = c.text.split(/,(?!\d{3})|\band\b|\||;/i).map((s) => s.trim()).filter(Boolean);
   const listy = /^no\s|free\b/i.test(c.text) && frags.length >= 2;
   if (listy) { claimVisuals.push({claim: c.text, visual: 'badges', why: 'a "free from" list - badges with slashed icons', url: c.url}); continue; }
   for (const fr of frags) {
@@ -122,9 +125,12 @@ for (const c of claims) {
     const minimise = /sugar|carb|calori|fat|sodium|chemical|additive|preservative|plastic/i.test(fr);
     const zero = fr.match(/\b0\s?(g|mg|%)\b/i) || /zero|no\s/i.test(fr) || (minimise && range && Number(range[1]) === 0);
     const pct = fr.match(/(\d+(?:\.\d+)?)\s?%/);
-    const count = fr.match(/(\d[\d,]*\+?)\s*(reviews|customers|sold|ratings|bowls|people|users)/i);
-    const amount = fr.match(/(\d+(?:\.\d+)?)\s?(g|mg|mcg|iu|cal|kcal|hours|hrs|minutes|min|days)\b/i);
+    // "18,000+ five-star reviews": up to two words may sit between the number and the noun
+    const count = fr.match(/(\d[\d,]*\+?)\s*(?:[\w-]+\s+){0,2}(reviews|customers|sold|ratings|bowls|people|users|cats|parents)/i);
+    const times = fr.match(/(\d+(?:\.\d+)?)\s?x\b/i); // "7.5x less time", "4x better"
+    const amount = fr.match(/(\d+(?:\.\d+)?)\s?(g|kg|mg|mcg|ml|l|iu|cal|kcal|hours|hrs|minutes|min|days|weeks|months?)\b/i);
     if (count) { v = 'counter'; value = count[1]; why = 'social proof rolls up, with star particles'; }
+    else if (times) { v = 'chart'; value = times[0].replace(/\s/g, ''); why = 'a multiplier - the old way vs the brand as a line or bars'; }
     else if (zero && /\d|zero/.test(fr)) { v = 'shatter+counter'; value = range ? range[0].replace(/\s/g, '') : (fr.match(/\b0\s?(g|mg|%)/i) || ['0'])[0].replace(/\s/g, ''); why = 'the problem object shatters, the counter rolls to zero'; }
     else if (range) { v = 'gauge'; value = range[0].replace(/\s/g, ''); why = 'a ring fills to the range'; }
     else if (pct) { v = 'gauge'; value = pct[0].replace(/\s/g, ''); why = 'a ring fills to the percentage'; }

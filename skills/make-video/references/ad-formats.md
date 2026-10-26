@@ -16,12 +16,12 @@ Writing patterns are in `script-structures.md`; editing grammar in `editing-test
 | Unboxing / First Impression | ffmpeg | VO, or a creator's own verified voice |
 | Day-in-the-Life | ffmpeg | VO, muted |
 | Skeptic | ffmpeg | VO, muted |
-| Urgent CTA | ffmpeg / Remotion end card | VO; real, live offer only |
-| Motion Graphics (any subject) | Remotion | Generated VO or music-led |
-| VSL (long VO-led) | ffmpeg (+ Remotion beats) | Actor B-roll / No Actor only, muted |
+| Urgent CTA | ffmpeg / HyperFrames end card | VO; real, live offer only |
+| Motion Graphics (any subject) | HyperFrames | Generated VO or music-led |
+| VSL (long VO-led) | ffmpeg (+ HyperFrames beats) | Actor B-roll / No Actor only, muted |
 | Testimonial | ffmpeg | Clip voice, jump cuts; verified speech needed |
 | Creator Mashup | ffmpeg | Actor A-roll only, no VO |
-| Founder Story | ffmpeg + Remotion | The user's real story and footage |
+| Founder Story | ffmpeg + HyperFrames | The user's real story and footage |
 
 If the library cannot carry a format, say so plainly and offer the nearest one you can build fully -
 do not quietly build a worse version.
@@ -35,7 +35,7 @@ up front which way the hero footage leans.
 - **9:16 (1080x1920)** - native for UGC. Landscape clips: `cover` + `anchorX` on a single subject (check
   it stays in the crop from in to out), `blurfill` when the whole frame matters, or a `glideleft/right` pan.
 - **16:9 (1920x1080)** - native for pro footage. Portrait UGC needs `blurfill` (sharp clip over a blurred
-  fill) or a Remotion layout tiling two portrait clips (good for comparisons). Never `cover`-crop portrait
+  fill) or a HyperFrames layout tiling two portrait clips (good for comparisons). Never `cover`-crop portrait
   into 16:9: it keeps a thin slice. Say this up front when the user picks 16:9 for a UGC-led ad.
 - Motion graphics are built natively at either size.
 
@@ -85,5 +85,5 @@ from the animation library made of the brand's motifs - never text alone; transi
 logo and URL. See `motion-graphics.md` and `animation-library.md`.
 
 **Mixed footage + graphics**: right for explainers, comparisons with numbers, anything footage cannot
-show. Render Remotion segments silent and pass them to `build_ad.mjs` as `file` segments so VO and music
+show. Render HyperFrames segments silent and pass them to `build_ad.mjs` as `file` segments so VO and music
 span the whole ad.

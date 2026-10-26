@@ -5,6 +5,7 @@
  *   node captions_from_words.mjs --edl edl.json --words transcripts.json [--write]
  *        [--max-words 4] [--band middle | --y 0.42] [--punch "higher in protein"]
  *        [--fix "martial moments=marshmallows"] [--fix ...]
+ *        [--style auto|pop|karaoke|pill|highlight|slam|gradient|neon|boxed --brand <slug> --project <hyperframes project>]
  *
  * Word timings come from transcribe.mjs (local Whisper) or ElevenLabs transcription, keyed by clip
  * symbol, in SOURCE seconds: { "<clipSymbol>": [ { w: [[start, end, word], ...] } ] }.
@@ -19,9 +20,15 @@
  * `fadeup`, `punch` on the one burst containing --punch, and `exit: "cut"` when the next caption follows
  * immediately. Without --write it prints the captions for review; with --write it replaces edl.captions.
  * Always read the result: Whisper mishears brand words - fix them with --fix "heard=correct".
+ *
+ * --style sets edl.captionStyle.animated: word-by-word captions rendered by HyperFrames in the brand's colours
+ * (build_ad.mjs). "auto" picks one that suits the brand's style (motifs.json) and differs from its last ad's.
+ * Each caption keeps its word timings ("words") for that.
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 
 const argv = process.argv.slice(2);
 const fixes = [];
@@ -118,6 +125,8 @@ const captions = bursts.map((b, k) => {
   let anim = k === 0 ? 'fade' : 'fadeup';
   if (punchNeedle && !punched && text.toLowerCase().includes(punchNeedle)) { anim = 'punch'; punched = true; }
   const c = { start: +start.toFixed(2), end: +Math.max(end, start + 0.3).toFixed(2), text, ...place, anim };
+  // word timings on the output timeline - animated caption styles (captionStyle.animated) light each word as it is said
+  c.words = b.map((w) => [+w.s.toFixed(2), +w.e.toFixed(2), w.w]);
   if (next != null && next - end < 0.15) c.exit = 'cut';
   return c;
 });
@@ -126,6 +135,36 @@ if (punchNeedle && !punched) console.error(`  warn   --punch "${opts.punch}" not
 
 for (const c of captions) console.log(`  ${c.start.toFixed(2).padStart(6)}-${c.end.toFixed(2).padEnd(6)} ${c.anim.padEnd(7)} ${c.text}`);
 console.log(`\n  ${captions.length} captions over ${total.toFixed(2)}s (timeline from in/out and transitions)`);
+// ---- the animated caption style
+if (opts.style) {
+  const STYLES = ['pop', 'karaoke', 'pill', 'highlight', 'slam', 'gradient', 'neon', 'boxed'];
+  let st = opts.style;
+  const root = process.env.MAKE_VIDEO_ROOT || path.join(os.homedir(), '.claude', 'make-video');
+  const B = opts.brand ? path.join(root, 'brands', opts.brand) : null;
+  const read = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
+  if (st === 'auto') {
+    const brandStyle = (B && read(path.join(B, 'motifs.json'))?.style) || 'bold';
+    const pool = {playful: ['pop', 'karaoke', 'slam', 'highlight', 'gradient'], premium: ['pill', 'boxed', 'gradient', 'pop'],
+      clinical: ['boxed', 'pill', 'highlight', 'pop']}[brandStyle] || ['slam', 'highlight', 'karaoke', 'neon', 'pop'];
+    const hist = (B && read(path.join(B, 'motion-history.json'))?.ads) || [];
+    const recent = hist.slice(-2).map((a) => a.captionStyle).filter(Boolean);
+    const fresh = pool.filter((x) => !recent.includes(x));
+    const from = fresh.length ? fresh : pool;
+    st = from[Math.floor(Math.random() * from.length)];
+    console.error(`  caption style: ${st} (brand style ${brandStyle}${recent.length ? `, recent ads used ${recent.join('/')}` : ''})`);
+  }
+  if (!STYLES.includes(st)) { console.error(`  --style "${st}" - use auto or one of ${STYLES.join(', ')}`); process.exit(2); }
+  edl.captionStyle = {...(edl.captionStyle || {}), animated: st, ...(opts.project ? {project: opts.project} : {})};
+  if (opts.write && B) {
+    // remember it, so the brand's next ad captions differently
+    const hf = path.join(B, 'motion-history.json'), h = read(hf) || {ads: []};
+    const nm = path.basename(edl.output || 'ad', '.mp4').replace(/-draft$/, '');
+    const e = (h.ads || []).find((a) => a.name === nm);
+    if (e) e.captionStyle = st; else (h.ads = h.ads || []).push({name: nm, date: new Date().toISOString().slice(0, 10), stage: 'captions', captionStyle: st});
+    try { fs.writeFileSync(hf, JSON.stringify(h, null, 2)); } catch { /* read-only cache */ }
+  }
+}
+
 if (opts.write) {
   const keep = (edl.captions || []).filter((c) => c.keep === true);
   edl.captions = [...captions, ...keep];
