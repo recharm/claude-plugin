@@ -10,10 +10,10 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Recharm",
-    "shortDescription": "Footage briefs and ad videos",
-    "longDescription": "Recharm turns a creative brief, script, or ad idea into a finished piece of ad creative using footage from your own Recharm clip library. It breaks the brief into scenes, searches your library for clips that fit each scene, reviews the candidates visually, and returns a shareable shot-by-shot brief with clip picks. It can also cut a finished ad video from those picks, with voiceover, music, and captions. Built for marketers, creative strategists, and video editors who produce paid-social and UGC ads. Requires a Recharm account with access to a clip library; it only works with footage in your own library.",
+    "shortDescription": "Footage briefs and clip picks",
+    "longDescription": "Recharm helps marketing and creative teams plan video ads using footage they already own. Give it a creative brief, script, or ad idea and it breaks it into scenes, searches your Recharm clip library for clips that fit each scene, reviews the candidates visually, and returns a shareable shot-by-shot brief with clip picks. It can also find gaps in your footage library and recommend which creator should front a concept. Built for marketers, creative strategists, and video editors producing paid-social and UGC ads. Requires a Recharm account with an existing clip library; it only searches footage in your own library.",
     "developerName": "Recharm",
-    "category": "Productivity",
+    "category": "Creativity",
     "capabilities": [
       "Search",
       "Write"
