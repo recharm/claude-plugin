@@ -2,7 +2,7 @@
 // (written by brand_motifs.mjs from the website and the Recharm library) into the project.
 // Components fall back to these when a scene doesn't name a shape, colour or icon, so even a minimal
 // scene animates with the brand's own objects (cereal loops, droplets, pills...) and product colours.
-import motifs from '../motifs.json';
+import {motifs} from '../shim/globals';
 import {C} from './theme';
 import type {IconName} from './lib/icons';
 import type {Shape} from './visuals';

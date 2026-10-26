@@ -24,13 +24,11 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { fetchWithFallback, findLocal } from './lib/net.mjs';
 
 /** This script's own directory, so bundled assets resolve wherever the EDL lives. */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -92,7 +90,7 @@ function resolveFrame(edl) {
  * short of its slot is a re-render, and the cheapest place to catch that is
  * here rather than after upload.
  *
- * Past the ceiling nothing is refused - the builder is also used for Remotion
+ * Past the ceiling nothing is refused - the builder is also used for HyperFrames
  * segments and re-cuts - but it says so, because over a minute the piece stops
  * being a paid-social ad and the duration should have been agreed with the
  * user rather than assumed.
@@ -347,13 +345,13 @@ function assText(s) {
 // ---------------------------------------------------------------- fetching
 
 async function fetchToFile(url, dest) {
-  const res = await fetch(url);
-  if (!res.ok) die(`download failed (${res.status}) for ${url}`);
-  // Write to .part and rename, so an interrupted run never leaves a truncated
-  // file in the cache that a later run would trust.
-  const part = `${dest}.part`;
-  await pipeline(Readable.fromWeb(res.body), createWriteStream(part));
-  fs.renameSync(part, dest);
+  // Host fallback (accelerated S3 -> standard S3), retries, and an atomic .part rename so an
+  // interrupted run never leaves a truncated file in the cache (lib/net.mjs).
+  const r = await fetchWithFallback(url, dest);
+  if (!r.ok) {
+    die(`download failed for ${url} - ${r.reason}. If this workspace can't reach the clip storage, run ` +
+      'fetch_clips.mjs: it lists the links for the user and picks the files up from a folder (set "clipsDir" in the EDL).');
+  }
 }
 
 function readableMedia(file) {
@@ -361,10 +359,16 @@ function readableMedia(file) {
   return r.status === 0 && Number(r.stdout.trim()) > 0;
 }
 
-async function materialise(src, cacheDir) {
+async function materialise(src, cacheDir, clipsDir, symbol) {
   if (!/^https?:\/\//i.test(src)) {
     if (!fs.existsSync(src)) die(`local file not found: ${src}`);
     return path.resolve(src);
+  }
+  // Clips the user dropped in a folder (fetch_clips.mjs) win over a download.
+  const local = clipsDir ? findLocal(src, symbol, [clipsDir]) : null;
+  if (local && readableMedia(local)) {
+    info(`local    ${path.basename(local)}`);
+    return path.resolve(local);
   }
   const key = crypto.createHash('sha1').update(src).digest('hex').slice(0, 16);
   const ext = (src.split('?')[0].match(/\.([a-z0-9]{2,4})$/i) || [, 'mp4'])[1].toLowerCase();
@@ -666,6 +670,8 @@ async function main() {
   info(`output ${W}x${H}${aspect ? ` (${aspect})` : ''} @ ${FPS}fps${DRAFT ? '  DRAFT - half size, fast encode' : ''}`);
   const base = path.dirname(path.resolve(edlPath));
   const cacheDir = path.resolve(base, edl.cacheDir ?? DEFAULTS.cacheDir);
+  // Clips the user supplied by hand (fetch_clips.mjs --from ...): used before any download.
+  const clipsDir = edl.clipsDir ? path.resolve(base, edl.clipsDir) : null;
   const workDir = path.resolve(base, edl.workDir ?? DEFAULTS.workDir);
   let output = path.resolve(base, edl.output ?? 'out/ad.mp4');
   if (DRAFT) output = output.replace(/(\.[^./\\]+)?$/, (ext) => `-draft${ext || '.mp4'}`);
@@ -737,7 +743,7 @@ async function main() {
   for (const seg of edl.segments) {
     const src = seg.url || seg.file;
     if (!src) die(`segment ${JSON.stringify(seg.clipSymbol ?? '')} has no url or file`);
-    resolved.push(await materialise(src, cacheDir));
+    resolved.push(await materialise(src, cacheDir, clipsDir, seg.clipSymbol));
   }
 
   // ---- 2. normalize ----------------------------------------------------
@@ -830,6 +836,11 @@ async function main() {
     ];
     if (keepClipAudio && hasAudioStream(src)) {
       args.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2');
+    } else if (keepClipAudio) {
+      // a silent segment (an animated scene, a clip with no sound) still needs an audio track, or the clip-audio
+      // join below has no stream to cross-fade and the whole build fails: give it silence
+      args.splice(args.indexOf('-t'), 0, '-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000');
+      args.push('-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2');
     } else {
       args.push('-an');
     }
@@ -1009,16 +1020,48 @@ async function main() {
   console.log('\n[4/5] captions');
   const caps = edl.captions || [];
   let assFile = null;
+  let capLayer = null; // animated captions (a transparent HyperFrames render), laid over everything
   if (caps.length) {
     for (const c of caps) {
       if (c.end <= c.start) die(`caption "${String(c.text).slice(0, 30)}" has end <= start`);
       if (c.end > total + 0.05) warn(`caption "${String(c.text).slice(0, 28)}" ends at ${c.end}s, past the ${total.toFixed(2)}s cut`);
       if (c.anim && !CAPTION_ANIMS[c.anim]) warn(`caption anim "${c.anim}" unknown - falling back to fadeup. Known: ${Object.keys(CAPTION_ANIMS).join(', ')}`);
     }
-    assFile = path.join(workDir, 'captions.ass');
-    fs.writeFileSync(assFile, buildAss(caps, edl.captionStyle, W, H), 'utf8');
-    const used = [...new Set(caps.map((c) => (c.anim && CAPTION_ANIMS[c.anim] ? c.anim : 'fadeup')))];
-    info(`${caps.length} caption${caps.length === 1 ? '' : 's'}, animated: ${used.join(', ')}`);
+    const animated = edl.captionStyle?.animated;
+    // the HyperFrames project that renders animated captions: captionStyle.project, else the one a motion segment came from
+    const motionRef = (edl.segments || []).map((sg) => sg.motion || sg.remotion).find(Boolean);
+    const capProject = edl.captionStyle?.project ? path.resolve(base, edl.captionStyle.project) : motionRef ? path.resolve(base, motionRef, '..', '..') : null;
+    if (animated && capProject && fs.existsSync(path.join(capProject, 'theme.json'))) {
+      // word-by-word captions in the brand's colours, rendered on transparency and laid over everything (hf_build --captions)
+      const capJson = path.join(workDir, `${path.basename(edl.output || 'ad', '.mp4').replace(/-draft$/, '')}-captions.json`);
+      fs.writeFileSync(capJson, JSON.stringify({duration: +total.toFixed(3), style: animated, captions: caps}));
+      const capMov = path.join(workDir, 'captions.mov');
+      // re-used while the captions, the brand theme and the runtime are unchanged (review rounds re-mix in seconds)
+      const readIf = (p) => (fs.existsSync(p) ? fs.readFileSync(p) : '');
+      const capKey = crypto.createHash('sha1').update(fs.readFileSync(capJson)).update(readIf(path.join(capProject, 'theme.json')))
+        .update(readIf(path.join(capProject, 'assets', 'vendor', 'mv-runtime.js'))).update(DRAFT ? 'draft' : 'full').digest('hex').slice(0, 12);
+      // in the cache folder (the work folder is cleared every run); the last few versions are kept so an undo is instant too
+      const capDir = path.join(cacheDir, 'captions');
+      fs.mkdirSync(capDir, {recursive: true});
+      const capCached = path.join(capDir, `captions_${capKey}.mov`);
+      let fromCache = fs.existsSync(capCached);
+      if (!fromCache) {
+        const r = spawnSync(process.execPath, [path.join(HERE, 'hf_build.mjs'), capJson, '--captions', '--project', capProject, '--out', capMov, ...(DRAFT ? ['--draft'] : [])], {encoding: 'utf8', maxBuffer: 1 << 26});
+        if (r.status !== 0 || !fs.existsSync(capMov)) die(`animated captions failed:\n${(r.stdout || '') + (r.stderr || '')}`);
+        fs.copyFileSync(capMov, capCached);
+        const old = fs.readdirSync(capDir).filter((f) => /^captions_[0-9a-f]{12}\.mov$/.test(f)).map((f) => path.join(capDir, f))
+          .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs).slice(4);
+        for (const f of old) fs.rmSync(f, {force: true});
+      } else fs.copyFileSync(capCached, capMov);
+      capLayer = capMov;
+      info(`${caps.length} caption${caps.length === 1 ? '' : 's'}, animated style "${animated}" (HyperFrames layer${fromCache ? ', unchanged - re-used' : ''})`);
+    } else {
+      if (animated) warn(`captionStyle.animated "${animated}" needs a HyperFrames project (captionStyle.project, or a "motion" segment) - burning plain captions instead`);
+      assFile = path.join(workDir, 'captions.ass');
+      fs.writeFileSync(assFile, buildAss(caps, edl.captionStyle, W, H), 'utf8');
+      const used = [...new Set(caps.map((c) => (c.anim && CAPTION_ANIMS[c.anim] ? c.anim : 'fadeup')))];
+      info(`${caps.length} caption${caps.length === 1 ? '' : 's'}, animated: ${used.join(', ')}`);
+    }
   } else {
     warn('no captions - most of this audience watches muted');
   }
@@ -1070,7 +1113,7 @@ async function main() {
   }
   if (sfxSpecs.length) info(`${sfxSpecs.length} sound effect${sfxSpecs.length === 1 ? '' : 's'} placed`);
 
-  // Overlays: transparent graphics rendered by the Remotion template's Overlay composition
+  // Overlays: transparent graphics rendered by hf_build.mjs --overlay (ProRes 4444)
   // (ProRes 4444 with alpha), laid on the footage at `at` seconds of the OUTPUT timeline, under the captions.
   const overlaySpecs = [];
   for (const ov of edl.overlays || []) {
@@ -1082,6 +1125,8 @@ async function main() {
     overlaySpecs.push({idx: idx++, at});
   }
   if (overlaySpecs.length) info(`${overlaySpecs.length} graphic overlay${overlaySpecs.length === 1 ? '' : 's'} placed`);
+  let capIdx = null;
+  if (capLayer) { inputs.push('-i', capLayer); capIdx = idx++; }
 
   /*
    * Place the bed a fixed number of dB under the speech - default 4.
@@ -1146,13 +1191,16 @@ async function main() {
     chains.push(`${vLabel}[ov${k}]overlay=0:0:eof_action=pass:format=auto${next}`);
     vLabel = next;
   });
-  if (assFile) chains.push(`${vLabel}subtitles=captions.ass:fontsdir=fonts[vout]`);
+  if (capIdx != null) {
+    chains.push(`[${capIdx}:v]scale=${W}:${H},format=yuva420p[capl]`);
+    chains.push(`${vLabel}[capl]overlay=0:0:eof_action=pass:format=auto[vout]`);
+  } else if (assFile) chains.push(`${vLabel}subtitles=captions.ass:fontsdir=fonts[vout]`);
   else if (overlaySpecs.length) chains.push(`${vLabel}null[vout]`);
   if (audioFilter) chains.push(audioFilter);
 
   const args = ['-hide_banner', '-loglevel', 'error', '-y', ...inputs];
   if (chains.length) args.push('-filter_complex', chains.join(';'));
-  args.push('-map', assFile || overlaySpecs.length ? '[vout]' : '0:v');
+  args.push('-map', assFile || capIdx != null || overlaySpecs.length ? '[vout]' : '0:v');
 
   if (audioFilter) args.push('-map', '[aout]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000');
   else { args.push('-an'); warn('rendering with no audio track'); }

@@ -4,7 +4,7 @@
  *
  *   node beats.mjs analyze music.mp3 [--out audiomap.json]
  *   node beats.mjs snap --edl edl.json --map audiomap.json [--window 0.35] [--write]
- *   node beats.mjs snap --scenes ads/<name>.json --map audiomap.json [--write]     (Remotion scene list)
+ *   node beats.mjs snap --scenes ads/<name>.json --map audiomap.json [--write]     (motion-graphics scene list)
  *
  * analyze: tempo, beats, downbeats, energy over time and whether the track is rhythmic at all (idea from
  * norahe0304-art/30x-video's audiomap, MIT; implemented here in plain Node - spectral-flux onsets, tempo by

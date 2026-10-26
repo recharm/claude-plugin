@@ -35,7 +35,7 @@ fs.mkdirSync(path.join(outDir, 'rules'), {recursive: true});
 const edl = JSON.parse(fs.readFileSync(edlPath, 'utf8'));
 const run = (cmd, args) => spawnSync(cmd, args, {encoding: 'utf8', maxBuffer: 64 * 1024 * 1024});
 
-// ---- format guess: clip-voice ads with no transitions are testimonials; Remotion-only files are motion
+// ---- format guess: clip-voice ads with no transitions are testimonials; motion-graphics-only files are motion
 const segs = edl.segments || [];
 const hasTransitions = segs.some((s) => s.transition && s.transition !== 'cut');
 const allFiles = segs.length && segs.every((s) => s.file && !s.url);

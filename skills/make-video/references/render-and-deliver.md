@@ -60,7 +60,7 @@ VO-led cuts, where the lines decide the cuts):
 ```bash
 node scripts/beats.mjs analyze bed.mp3 --out audiomap.json
 node scripts/beats.mjs snap --edl edl.json --map audiomap.json --write          # footage cuts
-node scripts/beats.mjs snap --scenes ads/<name>.json --map audiomap.json --write  # Remotion scene lengths
+node scripts/beats.mjs snap --scenes ads/<name>.json --map audiomap.json --write  # motion-graphics scene lengths
 ```
 
 It reports tempo and whether the track is rhythmic; each cut moves to the nearest beat (a downbeat when close) within
@@ -77,13 +77,18 @@ changed.
 - **Footage and mixed ads**: schema in `scripts/edl.example.json` (placeholders only). Set `"aspect"`; take
   `captionStyle` and `fontsDir` from `brand.json` and the cache's `fonts/`. Don't hand-roll ffmpeg. On Windows
   use a short `workDir` (`C:/adwork`).
-- **Motion graphics**: `motion-graphics.md` - `mg_init.mjs`, a scene list where every scene carries a visual
+- **Motion graphics**: `motion-graphics.md` - `hf_init.mjs`, a scene list where every scene carries a visual
   (`animation-library.md`), **`mg_check.mjs` PASS**, a half-scale preview checked one frame per scene, then a
-  silent Remotion render fed to `build_ad.mjs` as a `file` segment so VO, music, captions and the gate span the
+  silent HyperFrames render (`hf_build.mjs`) fed to `build_ad.mjs` as a `file` segment so VO, music, captions and the gate span the
   whole ad. Text that already carries every VO line inside the graphics can stand in for captions - say so.
   After the final render: `mg_check.mjs <ad>.json --record`, so the brand's next ad varies its animations.
 - **Graphics over footage**: the template's transparent `Overlay` (each item with an `icon` or a `visual`),
   added as `"overlays": [{"file", "at"}]`.
+
+## Hand-off to editors
+
+When the user wants to keep editing: `export_premiere.mjs edl.json` (Premiere timeline + captions + media) and/or
+`export_ae.mjs edl.json` (layered After Effects comp: every scene element its own layer). Details: `handoff.md`.
 
 ## QC (Step 6)
 

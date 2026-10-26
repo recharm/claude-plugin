@@ -1,31 +1,43 @@
-# Motion graphics with Remotion
+# Motion graphics with HyperFrames
 
 For motion-graphics ads (any subject), animated scenes inside a footage ad, end cards, and graphics laid
 over footage. Built at the chosen ratio: 1080x1920 (9:16) or 1920x1080 (16:9), 30fps.
 
+**How it is built.** HyperFrames (HeyGen, Apache-2.0) renders HTML to video by seeking a paused timeline frame by
+frame. This skill does not hand-write that HTML for every ad: the ad is a scene list (JSON), and `hf_build.mjs`
+compiles it into a HyperFrames project - one sub-composition per scene - in which the skill's animation library
+(`assets/hyperframes-runtime`, bundled as `mv-runtime.js`) draws every frame. So the planner, the checker, the brand
+motifs and every visual in `animation-library.md` work exactly as specified there; you write JSON, not HTML.
+
 **Two sources of truth, no overlap:**
-- **How to write Remotion code** - Remotion's official skills. **Load `remotion-best-practices` before
-  writing any Remotion code** (timing, springs, sequencing, `TransitionSeries`, fonts, video, rendering).
-  Its advice to open a preview instead of rendering doesn't apply: this skill renders after plan approval.
-- **What the ad should do** - this file, plus `captions-and-timing.md` for the four text presets.
+- **What the ad should do** - this file, `animation-library.md`, and `captions-and-timing.md` for the four text presets.
+- **How HyperFrames works** - only needed for a hand-written scene (`custom` with `html`, below): its own skill ships
+  inside the pinned install, `<cache>/tools/hyperframes/node_modules/hyperframes/dist/skills/hyperframes/SKILL.md`,
+  plus `npx hyperframes docs gsap` / `docs compositions`. Its advice to stop at a Studio preview doesn't apply: this
+  skill renders after plan approval.
 
 ## 1. Set up the brand's project (once per brand, seconds after that)
 
 ```bash
 node scripts/brand_motifs.mjs --brand <slug> --write       # what the animations are made of - confirm it (animation-library.md)
-node scripts/mg_init.mjs --brand <slug> --aspect 9:16      # or 16:9
+node scripts/hf_init.mjs --brand <slug> --aspect 9:16      # or 16:9
 ```
 
 `brand_motifs` reads the website and the library and writes `motifs.json`: the brand's own particle object,
 its problem object, product colours, packshot cut-outs, claim icons, a visual for every claim, and the library's
-actions to match-cut into. `mg_init` copies it into the project. It also refreshes the template from `assets/remotion-template/` into `<cache>/brands/<slug>/remotion/` and writes
+actions to match-cut into. `hf_init` copies it into the project at `<cache>/brands/<slug>/hyperframes/` and writes
 `theme.json` from `brand.json`: palette (primary, secondary, accent, ground, text, and a readable colour on
 primary), fonts (the brand's licensed files from the cache's `fonts/`, otherwise the bundled Poppins), the
-**logo copied exactly as published**, product packshots into `public/products/`, and the URL. It runs
-`npm install` only the first time. Never edit brand colours in `theme.json` - fix `brand.json` and re-run.
+**logo copied exactly as published**, product packshots into `assets/products/`, and the URL. It also refreshes the
+runtime (`assets/vendor/mv-runtime.js`) and GSAP. The first run installs the pinned HyperFrames + GSAP once for every
+brand (`<cache>/tools/hyperframes`); the first render downloads a headless Chrome. Never edit brand colours in
+`theme.json` - fix `brand.json` and re-run.
+
+Library clips a scene uses go in `assets/clips/` (`fetch_clips.mjs` downloads them; copy them there). `hf_build`
+re-encodes the stretch each scene uses with a keyframe every second - HyperFrames freezes on sparse keyframes.
 
 Brand guidelines from the user (interview question 6) go into `brand.json` and the cache's `fonts/` first,
-then `mg_init`. Push for them on a strictly motion-graphics ad - the design *is* the ad.
+then `hf_init`. Push for them on a strictly motion-graphics ad - the design *is* the ad.
 
 ## 2. Describe the ad as scenes, each with a visual (no new code for common beats)
 
@@ -62,7 +74,7 @@ list.
 | `compare` | Bars growing, highlighted winner, `note` for the source | Yes |
 | `list` | `marker: "icon"` draws icon steps (icons from motifs); other markers are text | Only with `marker: "icon"` or a visual |
 | `title`, `stat` | Text (a rule line; a counting number) | **No** - attach a visual |
-| `custom` | A bespoke component from `src/custom/` (`component`, `draws`) | Yes, if `draws` says what |
+| `custom` | A hand-written HyperFrames composition (`html`, `draws`) - see section 3 | Yes, if `draws` says what |
 
 Every scene also takes:
 - `bg`: `ground`, `primary`, `secondary` or `dark`.
@@ -70,35 +82,61 @@ Every scene also takes:
 - `glitch: true`.
 - `shake: [seconds]`.
 
+The scene list can set a top-level `"look"` (`film`, `paper`, `print`, `sweep`, `clean`) - one finish over the whole ad. Footage
+scenes take `"camera"` (`pushin`, `pullback`, `drift`, `rack`, `handheld`, `punch`, `static`); headings take kinetic `"preset"`s
+(`captions-and-timing.md`), with `"strike"` for the strike preset.
+
+Every scene also takes `bgStyle` (`glow`, `gradient`, `spotlight`, `grid`, `paper`, `pattern`, `blur-footage` + `bgClip`, `split`, and the
+shader styles `mesh`, `aurora`, `marble`, `liquid`, `godrays`, `blobs`, `voronoi`, `smoke`) - vary it so
+the ad is not one slab of colour; a light `bg` switches the graphics to dark ink (`animation-library.md`).
+
 Text on `primary`, `secondary`, `dark` and footage is automatically the readable colour. **Transitions** go on
 the scene they lead into:
-- **Types:** `fade`, `slide`, `wipe`, `whip`, `zoom` or `iris`.
-- **Options:** `direction`, `seconds`, and `timing` (`linear` or `spring`).
 
-Runtime = sum of durations - sum of transitions; the composition computes it.
+- **Types:** `fade`, `slide`, `wipe`, `whip`, `zoom`, `iris`, `carry` (a shape carries the eye), and `lightleak`, `ink`, `torn`,
+  `halftone`, `glitch`, `ripple`, `warp`, `chromatic`, `vortex`, `collage`, `burn`, `flash`, `pixel` (`animation-library.md`).
+- **Options:** `direction`, `seconds`, and `timing` (`linear` or `spring`); `carry` takes `variant` (`dot`, `ring`, `flood`,
+  `bar`, `object`), `at` `{x, y}` and `color`.
+
+A footage scene can put its graphics **behind the subject**: cut the person / product out of the clip with
+`node scripts/separate.mjs <project>/assets/clips/<CLIP>.mp4 --from <trimBefore> --dur <duration + 0.3> --points "x,y;x,y" --out <project>/assets/cutouts/<name>`
+(points as fractions of the first frame, read off the sprite) and set `"cutout": "cutouts/<name>"` on the scene. It
+writes `cutout.webm` (the subject on transparency), which plays frame-locked to the footage under it. Give `mg_plan`
+the same as `footage.cutout` in beats.json and it favours the shot.
+
+Runtime = sum of durations - sum of transitions; `hf_build` computes it (each scene's host starts where the previous
+scene's transition begins, so the two overlap like a cross-dissolve of any shape).
 
 ## 3. Check, then render
 
 ```bash
-node scripts/mg_check.mjs <cache>/brands/<slug>/remotion/ads/<name>.json     # must PASS
-cd <cache>/brands/<slug>/remotion
-npx remotion render src/index.ts Ad out/<name>.mp4 --props=ads/<name>.json --scale=0.5 --crf=24   # preview: one frame per scene
-npx remotion render src/index.ts Ad out/<name>.mp4 --props=ads/<name>.json --crf=16
+node scripts/mg_check.mjs <cache>/brands/<slug>/hyperframes/ads/<name>.json                 # must PASS
+node scripts/hf_build.mjs <cache>/brands/<slug>/hyperframes/ads/<name>.json --draft          # review: out/<name>.mp4, full size, fast
+node scripts/hf_build.mjs <cache>/brands/<slug>/hyperframes/ads/<name>.json --blur           # final: high quality + light motion blur
+# add --incremental to either: one cached window per scene, so after an edit only the changed scenes render again
+# (the review page, review.md, always renders this way)
 ```
+
+Drafts are full 1080x1920 and render in about 1.5x real time, so there is no half-scale preview step. `--blur`
+renders at 60fps and blends each pair of frames down to 30 (about 2.5x the render time): pops, stamps and whips lose
+their strobe. It is lighter than a multi-sample camera blur - fast whips still show two images, briefly. `--lint`
+prints HyperFrames' own checks of the generated project; the project stays in `<project>/build/<name>/`, where
+`npx hyperframes preview` opens it in HyperFrames' Studio for a look (edit the ad JSON, not the generated HTML -
+the next build overwrites it).
 
 `mg_check` blocks text-only scenes, unknown kinds, shapes and icons, missing files, and numbers that aren't on
 the site. It warns when motifs aren't confirmed, when scenes ignore the brand's own material, and when a device
-repeats. The renderer refuses a text-only scene too.
+repeats. The runtime refuses a text-only scene too.
 
-Render **silent** and pass it to `build_ad.mjs` as a `file` segment, so the VO, music, SFX, captions and the
+Render **silent** and pass it to `build_ad.mjs` as a `file` segment (add `"motion": "<project>/ads/<name>.json"` to that
+segment, so `export_ae.mjs` can rebuild it as layers - `handoff.md`), so the VO, music, SFX, captions and the
 gate run over the whole ad in one place.
 
-**Graphics over footage** (a stat callout or lower third on a testimonial) - render the `Overlay` composition
-with alpha and lay it on in the EDL:
+**Graphics over footage** (a stat callout or lower third on a testimonial) - render an overlay with alpha (ProRes
+4444) and lay it on in the EDL:
 
 ```bash
-npx remotion render src/index.ts Overlay out/<name>-overlay.mov --props=ads/<name>-overlay.json \
-  --image-format=png --pixel-format=yuva444p10le --codec=prores --prores-profile=4444
+node scripts/hf_build.mjs <cache>/brands/<slug>/hyperframes/ads/<name>-overlay.json --overlay      # -> out/<name>-overlay.mov
 ```
 
 ```json
@@ -113,6 +151,13 @@ Overlay item types are `lowerThird`, `title`, `stat`, `list` and `visual`. `y` (
 and product positions off the sprite and use the gap. In the EDL: `"overlays": [{"file": "<path>.mov", "at": 12.86}]`
 (`at` is output seconds). Overlays sit under the captions. In a testimonial, an overlay is a supporting graphic -
 use one only to reinforce a spoken claim.
+
+**A hand-written scene** - when no visual in the library fits: write a HyperFrames composition (HTML + GSAP, its
+skill's rules: a `<template>`, `#root` sized with `inset: 0`, one paused timeline registered as
+`window.__timelines["<id>"]`, no `Date.now()` or unseeded randomness) in `assets/custom/<file>.html`, give its root
+`data-composition-id` a unique id, and add the scene as `{"type": "custom", "html": "<file>.html", "draws": "<what it
+draws>", "duration": ...}`. It plays as written (brand colours: read `window.MV_THEME.color`); transitions into and
+out of it are hard cuts, and the After Effects export carries it as one layer.
 
 ## Rules for motion-graphics ads
 
@@ -134,7 +179,7 @@ Never a bare hard cut between motion scenes unless it lands on a beat - it reads
 
 The template eases everything: ease-out entering, ease-in leaving, ease-in-out for camera moves, springs for
 tactile elements (badges, pills, product reveals). Linear motion only for ambient loops (particles, idle drift).
-New components follow the same rule - use `src/lib/anim.ts` (`ramp`, `out`, `spr`, `SPRING`).
+A hand-written scene follows the same rule in GSAP (`power2.out` in, `power2.in` out, `back.out` for pops).
 
 ### Text with intent
 
@@ -150,7 +195,7 @@ don't count on their own:
 - A rule line, the animated background, a counter (rolling digits are still type) and scribbles, sparkles or
   rays (decoration).
 
-The renderer and `mg_check` both refuse a text-only scene. Keep it to one main visual plus at most one or two
+The runtime and `mg_check` both refuse a text-only scene. Keep it to one main visual plus at most one or two
 supporting marks per scene. Build visuals from the brand's motifs, not generic shapes. `animation-library.md` §3
 covers how.
 

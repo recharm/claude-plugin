@@ -46,15 +46,15 @@ const checks = [
     name: 'node',
     required: true,
     line: probe('node', ['--version']),
-    fix: 'https://nodejs.org - v18 or newer',
-    why: 'runs this toolchain, and Remotion for the motion-graphics formats',
+    fix: 'https://nodejs.org - v22 or newer (HyperFrames needs 22+)',
+    why: 'runs this toolchain, and HyperFrames for the motion-graphics formats',
   },
   {
     name: 'npx',
     required: false,
     line: probe('npx', ['--version'], true),
     fix: 'ships with npm',
-    why: 'runs Remotion and video-use without a global install',
+    why: 'runs video-use without a global install',
   },
 ];
 
@@ -122,7 +122,8 @@ console.log('  Optional, resolved on demand - nothing to install ahead of time:'
 console.log('    video-use    npx -y video-use@latest    reads a clip frame by frame when a');
 console.log('                 poster cannot settle a question (e.g. does burned-in text clear');
 console.log('                 before the frame you want to cut on)');
-console.log('    Remotion     npx create-video@latest    motion-graphics formats only');
+console.log('    HyperFrames  installed by hf_init.mjs   motion-graphics formats only (pinned, in <cache>/tools/hyperframes;');
+console.log('                 its first render downloads a headless Chrome, ~150 MB)');
 if (DEEP) {
   const vu = NEEDS_SHELL
     ? spawnSync('npx -y video-use@latest --help', { encoding: 'utf8', shell: true, timeout: 180000 })
@@ -150,12 +151,21 @@ if (DEEP) {
 // Companion skills and optional tools.
 {
   const sk = path.join(os.homedir(), '.claude', 'skills');
-  const have = ['remotion-best-practices', 'remotion-markup', 'remotion-render'].filter((n) => fs.existsSync(path.join(sk, n, 'SKILL.md')));
+  // HyperFrames: installed once per cache by hf_init.mjs (pinned); Node 22+ is its floor
+  const root = process.env.MAKE_VIDEO_ROOT || path.join(os.homedir(), '.claude', 'make-video');
+  const hfPkg = path.join(root, 'tools', 'hyperframes', 'node_modules', 'hyperframes', 'package.json');
+  const hfv = fs.existsSync(hfPkg) ? JSON.parse(fs.readFileSync(hfPkg, 'utf8')).version : null;
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
   console.log('');
-  console.log(`  ${have.length === 3 ? 'ok      ' : 'absent  '} remotion skills  ${have.length}/3 installed${have.length === 3 ? '' : ' - needed before writing Remotion code; see references/setup.md'}`);
+  console.log(`  ${hfv ? 'ok      ' : 'absent  '} hyperframes      ${hfv ? `${hfv} in ${path.dirname(path.dirname(path.dirname(hfPkg)))}` : 'not installed yet - hf_init.mjs installs it on the first motion-graphics ad'}`);
+  if (nodeMajor < 22) console.log(`  WARN     node ${process.versions.node} - HyperFrames needs Node 22+; motion graphics will not render until Node is upgraded`);
   const py = process.platform === 'win32' ? 'py' : 'python3';
   const w = spawnSync(py, ['-c', 'import whisper'], { encoding: 'utf8' });
   console.log(`  ${!w.error && w.status === 0 ? 'ok      ' : 'absent  '} whisper          ${!w.error && w.status === 0 ? 'local transcription available (scripts/transcribe.mjs)' : 'optional - else use ElevenLabs transcription'}`);
+  // OpenTimelineIO (optional): export_nle.mjs writes sequence.otio for Resolve 18.5+ with it, and checks its XML parses
+  const otioPy = path.join(root, 'tools', 'otio', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+  const o = fs.existsSync(otioPy) ? spawnSync(otioPy, ['-c', 'import opentimelineio, otio_fcp_adapter'], {encoding: 'utf8'}) : null;
+  console.log(`  ${o && o.status === 0 ? 'ok      ' : 'absent  '} opentimelineio   ${o && o.status === 0 ? 'export_nle writes sequence.otio (Resolve 18.5+) and checks its XML' : 'optional - export_nle skips sequence.otio (setup.md -> OpenTimelineIO)'}`);
 }
 
 // These live in the session, not on disk, so a script cannot probe them.
@@ -167,7 +177,47 @@ console.log('                    Audio Type, Captions. If they differ from the b
 console.log('                    the library was re-labelled - trust the live call (library.md -> Refreshing).');
 console.log('    ElevenLabs MCP  voiceover: creative_list_voices + creative_generate_speech.');
 console.log('                    music: creative_generate_in_flow node_type "music". Never invent a voice ID.');
-console.log('    Remotion        only for motion-graphics ads; npx resolves it on demand, no global install.');
+console.log('    HyperFrames     only for motion-graphics ads; hf_init.mjs installs the pinned version, no global install.');
+console.log('    -> Say which connectors are missing in your FIRST message (with the brand confirmation), and what');
+console.log('       changes without them - not after the script is written.');
+
+// ---- network: can this workspace reach what the ad needs? Cloud sandboxes (claude.ai) often allow only an
+// allowlist of hosts, and finding that out at render time wastes the whole session.
+const optArg = (n) => { const i = process.argv.indexOf(n); return i === -1 ? null : process.argv[i + 1]; };
+if (!process.argv.includes('--no-net')) {
+  const {probeHost} = await import('./lib/net.mjs');
+  const site = optArg('--site');
+  const targets = [
+    ['clip storage', 'https://recharm-content-library.s3-accelerate.amazonaws.com/', true, 'Recharm clips (accelerated S3)'],
+    ['clip storage', 'https://recharm-content-library.s3.amazonaws.com/', true, 'Recharm clips (standard S3, the fallback)'],
+    ['npm registry', 'https://registry.npmjs.org/hyperframes', false, 'HyperFrames + GSAP install (motion graphics, end cards)'],
+    ['chrome download', 'https://storage.googleapis.com/chrome-for-testing-public/', false, "HyperFrames' headless Chrome (first render only)"],
+    ...(site ? [['brand website', site, false, 'claims, packshots, colours, fonts']] : []),
+  ];
+  const res = await Promise.all(targets.map(([, u, s3]) => probeHost(u, {expectS3: s3})));
+  console.log('\n  Network (from this workspace):');
+  targets.forEach(([name, u, , why], i) => {
+    const r = res[i];
+    console.log(`  ${r.ok ? 'ok      ' : 'BLOCKED '} ${name.padEnd(14)} ${new URL(u).host.padEnd(52)} ${r.ok ? '' : r.reason}`);
+    if (!r.ok) console.log(`           needed for: ${why}`);
+  });
+  const clipsOk = res[0].ok || res[1].ok;
+  if (!clipsOk) {
+    console.log(`
+  CLIP DOWNLOADS ARE BLOCKED here. Tell the user NOW, before the interview, and offer:
+    1. Allow the hosts: an admin adds  recharm-content-library.s3-accelerate.amazonaws.com  and
+       recharm-content-library.s3.amazonaws.com  (plus the brand website) to the workspace's allowed domains
+       for code execution, then starts a new chat.
+    2. Supply the clips by hand: after the shortlist, fetch_clips.mjs writes DOWNLOAD-THESE.html (one link
+       per clip); the user downloads them into one folder and shares or uploads it; fetch_clips --from picks
+       them up by file name.
+    3. No library footage: a motion-graphics ad from the website packshots${res[4] && !res[4].ok ? ' (the website is blocked too - the user must upload packshots and a logo)' : ''}.`);
+  } else if (!res[0].ok) {
+    console.log('\n  note     the accelerated clip host is blocked but the standard one works - downloads fall back to it automatically.');
+  }
+  if (!res[2].ok) console.log('\n  note     npm is blocked - HyperFrames can only run if <cache>/tools/hyperframes is already installed; plan footage-only (ffmpeg) edits.');
+  if (!res[3].ok) console.log("\n  note     the Chrome download host is blocked - HyperFrames renders only if its browser is already cached (npx hyperframes doctor).");
+}
 
 console.log('');
 if (failed) {

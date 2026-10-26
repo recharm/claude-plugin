@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", "module": "ESNext", "moduleResolution": "Bundler", "strict": false, "noEmit": true, "skipLibCheck": true,
+    "jsx": "react-jsx", "jsxImportSource": "preact", "allowSyntheticDefaultImports": true, "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "react": ["node_modules/preact/compat"], "react/jsx-runtime": ["node_modules/preact/jsx-runtime"],
+      "remotion": ["shim/remotion.tsx"], "@remotion/transitions": ["shim/transitions.tsx"], "@remotion/transitions/*": ["shim/transitions.tsx"],
+      "@remotion/media": ["shim/media.ts"], "@remotion/fonts": ["shim/fonts.ts"], "@remotion/motion-blur": ["shim/motion-blur.tsx"]
+    }
+  },
+  "include": ["src", "shim"]
+}
