@@ -1,12 +1,12 @@
 ---
 name: make-video
-description: Build a finished ad MP4 for ANY brand in the user's Recharm library, then let editors review and finish it. Detects and confirms the brand, pulls its profile, labels, creators, products and clips via the Recharm MCP, harvests the brand website and caches product/creator/actor/audio catalogs. Interviews the user (9:16 or 16:9, 15/20/25s or custom, ad type, product, creator, music, voiceover, branding), scripts from ten hook structures, generates (ElevenLabs) or accepts VO and music, renders with ffmpeg or HyperFrames (brand-built animations), and saves a Recharm brief. Adds a review page (scene notes, quick edits, per-scene re-renders in seconds) and a layered Premiere Pro / DaVinci Resolve export (plates, graphics and text as separate clips). Covers testimonial, problem/solution, promo, comparison, unboxing, before/after, tutorial, motion graphics, VO/VSL and mashups. Use whenever the user wants to make, review, re-cut or hand off an ad, UGC or paid-social video from their Recharm library.
+description: Build a finished ad MP4 for ANY brand in the user's Recharm library, then let editors review and finish it. Detects and confirms the brand, pulls its profile, labels, creators, products and clips via the Recharm MCP, harvests the brand website, caches catalogs. Can rebuild a reference ad shot for shot by searching the library by image. Interviews the user (9:16 or 16:9, 15/20/25s or custom, ad type, product, creator, music, voiceover, branding), scripts from ten hook structures, generates (ElevenLabs) or accepts VO and music, renders with ffmpeg or HyperFrames (brand-built animations), and saves a Recharm brief. Adds a review page (scene notes, quick edits, per-scene re-renders in seconds) and a layered Premiere Pro / DaVinci Resolve export. Covers testimonial, problem/solution, promo, comparison, unboxing, before/after, tutorial, motion graphics, VO/VSL and mashups. Use whenever the user wants to make, review, re-cut or hand off an ad, UGC or paid-social video from their Recharm library.
 compatibility: Requires the Recharm MCP. Rendering needs ffmpeg (libx264, libass) and Node 22+. Generated voiceover and music need the ElevenLabs MCP. Motion graphics use HyperFrames (installed by hf_init.mjs, pinned).
 ---
 
 # Make Video (HyperFrames, editor edition)
 
-This is the HyperFrames make-video skill plus two tools for the people who finish ads. Everything else is unchanged: brand
+This is the HyperFrames make-video skill plus two tools for the people who finish ads and a search by image. Everything else is unchanged: brand
 detection, library, interview, scripting, audio, the ffmpeg build, the HyperFrames animation library, the gate,
 the critic.
 - **The review page** (`review.mjs`, `review.md`). The user watches the ad, leaves notes on scenes, and makes quick
@@ -16,6 +16,10 @@ the critic.
   arrives in the editor's timeline as plates, per-scene graphics and per-scene text on separate tracks, with the
   captions, the audio with its ducking, markers, and the finished MP4 as a reference track. `--verify` checks it
   against the MP4.
+- **Search by image** (`search_video_library_by_image`; `analyze_reference --search-frames`, `image_query.mjs`,
+  `contact_sheet --match`). Finds clips that look like a picture: rebuild a reference ad shot for shot, refresh the
+  user's own ad with new footage, swap a rejected clip for a lookalike from another shoot, or pin down the exact
+  product. Rules and score bands in `library.md` 2b; the reference workflow in `reference-analysis.md` section 5.
 
 You produce a finished, ready-to-upload ad - a rendered `.mp4` the user could post this afternoon - not a plan.
 A Recharm brief is a by-product you also save. The library method follows Recharm's **brief-creator** (capture the
@@ -30,7 +34,7 @@ colours from a slug the user has not confirmed.
 
 | Need | Kind | Required? | Used for |
 |---|---|---|---|
-| Recharm MCP | Connector | **Required** | Brand info, labels, clip search, posters/sprites, `save_brief` |
+| Recharm MCP | Connector | **Required** | Brand info, labels, clip search (text and by image), posters/sprites, `save_brief` |
 | ffmpeg + ffprobe (libx264, libass, libvpx), Node 22+ | Install | Required to render | Cutting, captions, mix, probing; the scripts and HyperFrames |
 | ElevenLabs MCP | Connector | For generated VO or music | Voiceover, music, transcription |
 | HyperFrames 0.8.185 + GSAP 3.14.2 (pinned; `hf_init.mjs` installs them once) | npm, then a headless Chrome on first render | Any animated scene or overlay | Renders the animation library (pours, charts, gauges, cards, badges, packshots, countdowns, phones, sliders, fills, timelines, scales, checklists, draw-ons...), end cards, overlays. Its own skill (inside the install) is only needed for a hand-written `custom` scene |
@@ -52,7 +56,7 @@ only when something is missing or a render fails.
 |---|---|
 | `brand-detection.md`, `catalog-building.md`, `brand-assets.md` | Steps 1-2 (first time for a brand) |
 | `reference-analysis.md` | Step 3b, when the user gives a reference video |
-| `library.md` | Step 4, before the first search |
+| `library.md` | Step 4, before the first search (section 2b before any search by image) |
 | `script-structures.md`, `ad-formats.md` | Step 5 |
 | `editing-testimonial.md` / `editing-promo.md` / `motion-graphics.md` | Step 5 - **only the one(s) for this format** |
 | `animation-library.md` | Step 2 (motifs) and Step 5 - **any ad with an animated scene, insert or overlay** |
@@ -65,7 +69,9 @@ only when something is missing or a render fails.
 
 **Scripts**: `preflight` (toolchain, network reach to clips / npm / site) · `fetch_clips` (clips in, whatever the
 network allows) · `catalog_tool` (brand cache) · `check_filters` (filters vs labels) ·
-`harvest_site` (Shopify products, colours, fonts) · `analyze_reference` (reference rhythm and shots) · `clip_tag`
+`harvest_site` (Shopify products, colours, fonts) · `analyze_reference` (reference rhythm and shots;
+`--search-frames` for per-shot image-search queries) · `image_query` (any image, poster or clip frame -> a small
+query image for image search) · `clip_tag`
 (clip cuts, energy, usability) · `transcribe` (local Whisper) ·
 `captions_from_words` (word-timed captions; `--style` for animated, word-by-word captions in the brand's colours) · `beats` (cut on the music) · `variants` (A/B hooks) · `build_ad` (+ `edl.example.json`; the ffmpeg renderer:
 `--draft`, cached clips, captions, SFX, overlays) · `brand_motifs` (what the brand's animations are made of, from
@@ -73,7 +79,8 @@ its website and library) · `hf_init` (brand-themed HyperFrames project; install
 MP4; `--draft`, `--blur`, `--overlay`, `--isolate`, `--layer`, `--incremental` (one cached window per scene: only
 changed scenes re-render)) · `mg_plan` (picks a different, fitting animation per beat,
 remembering the brand's last ads; carry transitions) · `mg_check` (no text-only or repeated animation, claims) ·
-`separate` (SAM 2.1 cut-out of a clip's subject, so graphics sit behind it) · `contact_sheet` ·
+`separate` (SAM 2.1 cut-out of a clip's subject, so graphics sit behind it) · `contact_sheet` (`--match`: reference
+shots beside their picks) ·
 `gate` (pass/fail) · `critic_pack` (critic's packet) · `review` (the review page: notes, quick edits, per-scene
 re-renders, final, export) · `export_nle` (layered Premiere / Resolve timeline; `export_premiere` is its old name) ·
 `export_ae` (layered After Effects comp).
@@ -163,6 +170,10 @@ named a number over 2 minutes, ask them to confirm it.
 > "What kind of ad would you like to create? (Example: Testimonial, Problem and Solution, Motion graphics, etc.)
 > If you have a **reference video or script**, share it - it gives me a much better idea of the style you want."
 
+If they share a reference **video**, ask once: "Should I match it **shot for shot** (same kinds of shots, found in
+your library by image), or just its **structure and pacing**?" Shot for shot is the right default when they say
+"remake this" or the reference is their own ad they want refreshed with new footage.
+
 **Then the six production questions:**
 
 1. **Product name.** Resolve it against `products.json` and confirm it back with its Recharm label and coverage.
@@ -190,9 +201,9 @@ named a number over 2 minutes, ask them to confirm it.
 ### Step 3b - Measure the reference
 
 A reference outranks the default structures. If they give one, run `node scripts/analyze_reference.mjs <file>
---out ref/ --transcribe`, read `ref/shots.jpg`, and write the breakdown in `reference-analysis.md` (hook, structure,
-pacing, voice, text style, transitions, slots). Match its rhythm and grammar with this brand's claims and footage,
-and say what you took from it.
+--out ref/ --transcribe` (add `--search-frames` for shot for shot), read `ref/shots.jpg`, and write the breakdown
+in `reference-analysis.md` (hook, structure, pacing, voice, text style, transitions, slots). Match its rhythm and
+grammar with this brand's claims and footage, and say what you took from it.
 
 ---
 
@@ -229,10 +240,16 @@ Read `library.md` first. Then:
    weak. **Before searching, make sure the liveness check has covered every label you'll filter on** (the Tier 2
    check; `check_filters` can only flag dead labels that check has recorded). Validate:
    `node scripts/check_filters.mjs --brand <slug> --file filter.json`.
+   **When a scene has a picture of the shot** - a reference frame (shot for shot), a product photo for the exact
+   variant, a storyboard frame - make its first query `search_video_library_by_image` with that picture (prepared by
+   `--search-frames` or `scripts/image_query.mjs`) and the same filters, and keep one literal text query as the
+   backup. Score bands, exclusions and raw-video hits: `library.md` section 2b.
 4. **Search in subagents, in parallel** (each call costs ~10-17k tokens - search is the biggest cost in the skill,
    so keep queries few). Each returns only a short pick list per
-   scene: `clipSymbol`, `clipName`, `rawVideoPublicId`, `cosineDistance`, `durationMs`, labels, `downloadUrl`, query
-   and filters - 1-3 best hits per query, deduped, **at most one clip per `rawVideoPublicId` per scene**.
+   scene: `clipSymbol`, `clipName`, `rawVideoPublicId`, `cosineDistance` (or `similarity` for an image search),
+   `durationMs`, labels, `downloadUrl`, query and filters - 1-3 best hits per query, deduped, **at most one clip per
+   `rawVideoPublicId` per scene**. Image searches send the picture as base64 text, so they never run in the main
+   conversation (brief template in `library.md` 2b).
 5. **Narrow with posters, then measure and look at the shortlist**: `node scripts/clip_tag.mjs <urls>` (cuts
    inside clips, frozen/black stretches, motion energy, speech, usable windows, usability 1-5), then
    `get_clip_sprite_image` for clips that reach the plan - burned-in text, mouths under VO, the right product,
@@ -267,7 +284,8 @@ user**:
   run); you review and adjust. If this workspace has no memory of the brand's ads (`no memory of earlier ads` in its
   output), ask once which animations recent ads used and pass them as `--recent`.
 - Total runtime **after transitions**. **Every claim and number with its source.** Any compromise the library forced.
-- What you took from the reference, if there was one.
+- What you took from the reference, if there was one. **Shot for shot**: show `ref/matches.jpg` (`contact_sheet.mjs
+  --match`) - each reference shot beside its pick with the similarity - and the counts (strong / loose / gap).
 - **Audio direction as a brief, not a restatement**: for generated music - genre, tempo (BPM), instruments, energy
   arc across the ad, where it lifts and drops, instrumental only; for a generated voice - the voice filters you'll
   search with (gender, age, accent, descriptives, use case) and the read (pace, energy, where the CTA lifts).

@@ -40,6 +40,67 @@ Problem beat -> a Problems/Competitor category; Proof -> Experiment/Demo/Benefit
 The search method is Step 4 in `SKILL.md`. If a scene comes back empty or weak: drop one filter
 category, then try the unfiltered query, then a synonym. Only then call it a gap, and say so plainly.
 
+## 2b. Searching by image
+
+`search_video_library_by_image(brandName, image, filters?, cursor?, purpose?)` finds clips **and raw source
+videos** that look like a picture. Use it whenever there is a picture of the shot you want - it carries framing,
+angle, colour and setting that a text query loses. Text search stays the default when there is no picture.
+
+**When to use it**
+
+| Situation | Query image | Keep / exclude |
+|---|---|---|
+| Shot-for-shot from a reference ad | `analyze_reference.mjs --search-frames` -> `ref/search/` | `reference-analysis.md` section 5 |
+| Refresh the user's own ad with new footage | the same, on their ad | exclude 0.85+ hits and their `rawVideoPublicId`s |
+| Swap a clip the user or editor rejected ("something like this, but not this") | `image_query.mjs <its downloadUrl> --at <secs of the frame they mean>` | exclude its `rawVideoPublicId` |
+| Make sure the exact product / colourway is on screen | the product photo from the brand cache: `image_query.mjs <product image>` | keep only hits whose sprite shows that variant |
+| Storyboard, mood board or mock-up frames the user uploads | `image_query.mjs board/*.png` | as shot-for-shot |
+| A pick is too short, or a J/L-cut needs room | the pick's poster | the **raw video** hit and its `matchedAtMs` (below) |
+
+For a product photo, also try `search_image_library_by_image` - it finds brand-owned stills (pack shots, lifestyle
+photos) for end cards and inserts, often at higher resolution than the website's copy.
+
+**Preparing the image.** Always through `scripts/image_query.mjs` (or `--search-frames`): ~512px on the long side,
+re-encoded until it is under `--max-kb` (40 by default; 25 for long shot lists). It writes `<name>.b64` - the raw
+base64 to pass as `image`. Every byte goes into the call as text, so **image searches run in subagents** like the
+text searches: the subagent reads the `.b64`, makes the call, and returns only the pick list. Never paste a `.b64`
+into the main conversation.
+
+**Filters.** The `filters` argument works as in text search (validated, live, 0-2 categories) and **the voice table
+in `SKILL.md` still applies** - a VO-led ad filters `Actor Type: ["Actor B-roll", "No Actor"]`. Filters apply only
+to `clips`; `rawVideos` come back unfiltered, so check those for speech and mouths by eye.
+
+**Score bands.** Hits come ranked by `similarity` (higher is closer; the tool drops anything under 0.65):
+
+| similarity | Means | Use |
+|---|---|---|
+| **0.85+** | the same shot | the clip itself; exclude it when refreshing or swapping |
+| **0.75-0.85** | a strong stand-in - same composition, another take or shoot | default pick |
+| **0.65-0.75** | loose - same kind of shot | only after the sprite check; else fall back to a text query |
+| none returned | the library has nothing like it | a gap - say so, or try the literal text query |
+
+`similarity` (higher is better) and text search's `cosineDistance` (lower is better) are different scales: rank
+within each search, never across them. When a scene has both, prefer a strong image hit; a loose image hit loses to
+a clean text hit that does the shot's job.
+
+**Raw videos and `matchedAtMs`.** A `rawVideos` hit is the full source video with the time of the closest frame,
+and it can match footage that no clip covers. Use it when the best clip is too short or cuts off a move: download
+`downloadUrl`, take the in point around `matchedAtMs`, and run `clip_tag.mjs` on the source to find the usable
+window around it. Name it in the plan by `rawVideoName` and the time range.
+
+**Same rules as every pick.** At most one clip per `rawVideoPublicId` per scene; `clip_tag.mjs`, then the sprite and
+its four scores (section 3). Similarity measures look, not meaning - a lookalike can be the wrong variant, carry
+burned-in text, or show a rival's pack.
+
+**Subagent brief (one per batch of scenes):**
+> Brand `<slug>`. For each row in `<scenes.json>` (scene, `.b64` path, filters): read the `.b64` file and call
+> `search_video_library_by_image` with `brandName`, `image` = its contents, `filters`, and `purpose` = "match
+> reference shot <n> for a <brand> ad". Exclude `rawVideoPublicId`s in `<exclude list>`. Return per scene only:
+> the top 3 clips (`clipSymbol`, `clipName`, `rawVideoPublicId`, `similarity`, `durationMs`, labels, `posterUrl`,
+> `downloadUrl`), at most one per `rawVideoPublicId`, plus the best raw video hit (`rawVideoPublicId`,
+> `rawVideoName`, `matchedAtMs`, `similarity`, `downloadUrl`) if it beats the top clip. Say "no hits" for empty
+> scenes. Do not return the image data.
+
 ## 3. Screening picks
 
 **Measure the shortlist first** (downloads each clip once; it is cached for the render):
@@ -119,7 +180,8 @@ packshots and palette (`motion-graphics.md`), instead of forcing weak clips into
 ## 5. Coverage
 
 Count distinct shoots and usable seconds; want ~1.5x the runtime. A weak scene is a gap (motion-graphic
-beat, website image, or custom shoot), said out loud, not padded.
+beat, website image, or custom shoot), said out loud, not padded. A shot whose image search returns nothing and
+whose text query is weak too is a gap the reference proves you need - list it as a shot to film.
 
 ## 6. Refreshing
 
