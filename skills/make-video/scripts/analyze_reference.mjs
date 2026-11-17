@@ -12,6 +12,10 @@
  *     on-screen text style and position, talking head vs b-roll vs graphics, and transition style
  *   - audio: integrated loudness, silent gaps, whether speech/music runs throughout
  *   - --transcribe: word-timed transcript (via transcribe.mjs / local Whisper): the hook line, words per second
+ *   - --search-frames: per-shot query images for Recharm's `search_video_library_by_image` - a 512px JPEG and
+ *     its base64 (.b64) at the middle of every shot, plus one at 80% for shots of 2s or more (the second frame
+ *     catches movement and reveals). Written to <out>/search/ with a manifest, search/frames.json. Used for
+ *     shot-for-shot matching - see references/reference-analysis.md section 5.
  *
  * Read `references/reference-analysis.md` for how to turn the result into a plan. Scene detection misses soft
  * dissolves and counts flashes as cuts - check the sheet, and adjust --threshold (lower finds more cuts).
@@ -21,6 +25,7 @@ import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {searchFrame} from './lib/searchframe.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -28,8 +33,9 @@ const opt = (n, d) => { const i = argv.indexOf(n); if (i === -1) return d; const
 const outDir = path.resolve(opt('--out', 'ref'));
 const threshold = Number(opt('--threshold', '0.3'));
 const doTranscribe = argv.includes('--transcribe');
+const doSearchFrames = argv.includes('--search-frames');
 const src = argv.find((a) => !a.startsWith('--'));
-if (!src) { console.error('usage: node analyze_reference.mjs <video|url> [--out ref/] [--threshold 0.3] [--transcribe]'); process.exit(2); }
+if (!src) { console.error('usage: node analyze_reference.mjs <video|url> [--out ref/] [--threshold 0.3] [--transcribe] [--search-frames]'); process.exit(2); }
 fs.mkdirSync(outDir, {recursive: true});
 
 const run = (cmd, args, o = {}) => spawnSync(cmd, args, {encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, ...o});
@@ -96,6 +102,28 @@ if (thumbs.length) {
   thumbs.forEach((f) => fs.rmSync(f, {force: true}));
 }
 
+// ---- query images for image search (one per shot, a second late in longer shots)
+let searchFrames = null;
+if (doSearchFrames) {
+  const sdir = path.join(outDir, 'search');
+  fs.mkdirSync(sdir, {recursive: true});
+  searchFrames = [];
+  for (const s of shots.slice(0, 48)) {
+    const id = `shot_${String(s.i).padStart(2, '0')}`;
+    const picks = [['mid', s.start + s.dur * 0.5]];
+    if (s.dur >= 2) picks.push(['late', s.start + s.dur * 0.8]);
+    for (const [pos, t] of picks) {
+      const base = path.join(sdir, pos === 'mid' ? id : `${id}_late`);
+      try {
+        const f = searchFrame(file, base, {at: Math.min(t, dur - 0.05)});
+        searchFrames.push({shot: s.i, pos, at: +t.toFixed(2), shotStart: s.start, shotDur: s.dur,
+          jpg: path.relative(outDir, f.jpg).replace(/\\/g, '/'), b64: path.relative(outDir, f.b64).replace(/\\/g, '/'), bytes: f.bytes});
+      } catch (e) { console.log(`  note   ${e.message}`); }
+    }
+  }
+  fs.writeFileSync(path.join(sdir, 'frames.json'), JSON.stringify({source: src, frames: searchFrames}, null, 1));
+}
+
 // ---- audio
 let audio = {present: hasAudio};
 if (hasAudio) {
@@ -128,6 +156,7 @@ const result = {
   rhythm: {shots: shots.length, medianShot: median, meanShot: mean, cutsPer10s: +(cuts.length / dur * 10).toFixed(1),
     firstCutAt: cuts[0] ?? null, pace, threshold},
   shots, audio, transcript,
+  searchFrames: searchFrames ? 'search/frames.json' : null,
 };
 fs.writeFileSync(path.join(outDir, 'reference.json'), JSON.stringify(result, null, 1));
 
@@ -136,4 +165,8 @@ console.log(`  rhythm   ${shots.length} shots, median ${median}s, mean ${mean}s,
 console.log(`  shots    ${shots.map((s) => s.dur).join(' | ')}`);
 if (hasAudio) console.log(`  audio    ${audio.lufs} LUFS, ${audio.silentGaps.length} silent gap(s)${audio.soundThroughout ? ', sound throughout' : ''}`);
 if (transcript) console.log(`  speech   ${transcript.words} words, ${transcript.wordsPerSecond} w/s, first word at ${transcript.firstWordAt}s\n           hook: "${transcript.hookLine}"`);
+if (searchFrames) {
+  const kb = Math.round(searchFrames.reduce((a, f) => a + f.bytes, 0) / 1024);
+  console.log(`  search   ${searchFrames.length} query image(s) for ${new Set(searchFrames.map((f) => f.shot)).size} shot(s), ${kb} KB total -> ${path.join(outDir, 'search', 'frames.json')}`);
+}
 console.log(`\n  wrote ${path.join(outDir, 'reference.json')} and shots.jpg - read the sheet for framing, text style and transitions\n`);
